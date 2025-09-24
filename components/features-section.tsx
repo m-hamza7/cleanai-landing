@@ -6,7 +6,7 @@ const features = [
     icon: Eye,
     title: "AI Waste Detection",
     description: "YOLOv8 and R-CNN models accurately identify and classify different types of waste with >80% accuracy",
-    metric: "80%+ Accuracy",
+    metric: "90%+ Accuracy",
   },
   {
     icon: MapPin,
