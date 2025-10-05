@@ -4,8 +4,19 @@ import { ArrowRight, Play } from "lucide-react"
 export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center grid-pattern">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
-      <div className="relative z-10 max-w-4xl mx-auto text-center px-6">
+      {/* Background image for hero section */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: "url('/IMPORTANCE-OF-WASTE-MANAGEMENT.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: 0.15, // Adjust opacity as needed
+          pointerEvents: "none",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background z-10" />
+      <div className="relative z-20 max-w-4xl mx-auto text-center px-6">
         <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm mb-8">
           <span className="w-2 h-2 bg-primary rounded-full mr-2 animate-pulse" />
           AI-Powered Urban Solutions
