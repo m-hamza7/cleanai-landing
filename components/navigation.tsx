@@ -23,6 +23,13 @@ export function Navigation() {
           <a href="#impact" className="hover:text-foreground transition-colors">
             Impact
           </a>
+
+          <a href="research-papers" className="hover:text-foreground transition-colors">
+            Research Papers
+          </a>
+
+
+
         </div>
       </div>
       <div className="flex items-center space-x-4">
