@@ -11,7 +11,7 @@ export default function ResearchPapers() {
           <ul className="space-y-6">
             <li>
               <a
-                href="https://example.com/paper1"
+                href="https://www.researchgate.net/publication/371490458_Improved_flood_mapping_for_efficient_policy_design_by_fusion_of_Sentinel-1_Sentinel-2_and_Landsat-9_imagery_to_identify_population_and_infrastructure_exposed_to_floods"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-lg font-semibold text-primary underline hover:text-primary-foreground transition-colors"
