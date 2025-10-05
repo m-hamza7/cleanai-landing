@@ -12,7 +12,7 @@ export function HeroSection() {
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold mb-6 text-balance leading-tight">
-          The future of <span className="text-primary">smart waste</span> management and flood prevention
+          <span className="text-primary">Clean AI:</span> The future of smart waste management and flood prevention
         </h1>
 
         <p className="text-xl text-muted-foreground mb-8 text-pretty max-w-2xl mx-auto leading-relaxed">
