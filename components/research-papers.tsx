@@ -33,8 +33,7 @@ export default function ResearchPapers() {
                 Wolfgang Wagner
               </p>
             </li>
-
-             <li>
+            <li>
               <a
                 href="https://www.researchgate.net/publication/395871475_Extreme_Flooding_in_Pakistan_An_AI-Powered_Framework_for_Enhanced_Urban_Flood_Management_System"
                 target="_blank"
@@ -45,8 +44,9 @@ export default function ResearchPapers() {
               </a>
               <p className="text-sm text-muted-foreground mt-1">
                 By Muhammad Yasir Zaheen, Dure Jabeen, Ali Akbar Siddiqui, and Muhammad Aamir
+              </p>
             </li>
-              <li>
+            <li>
               <a
                 href="https://www.nature.com/articles/s41598-025-08461-w"
                 target="_blank"
@@ -57,6 +57,7 @@ export default function ResearchPapers() {
               </a>
               <p className="text-sm text-muted-foreground mt-1">
                 By Gulzar Ahmad, Fizza Muhammad Aleem, Tahir Alyas, Qaiser Abbas, Waqas Nawaz, Taher M. Ghazal, Abdul Aziz, Saira Aleem, Nadia Tabassum & Aidarus Mohamed Ibrahim
+              </p>
             </li>
             {/* Add more papers as needed */}
           </ul>
