@@ -16,23 +16,23 @@ export default function ResearchPapers() {
                 rel="noopener noreferrer"
                 className="text-lg font-semibold text-primary underline hover:text-primary-foreground transition-colors"
               >
-                Title of Research Paper 1
+                Improved flood mapping for efficient policy design by fusion of Sentinel-1, Sentinel-2, and Landsat-9 imagery to identify population and infrastructure exposed to floods
               </a>
               <p className="text-sm text-muted-foreground mt-1">
-                Short description or authors.
+                By Usman NazirZubair KhalidMomin Uppal Muhammad Waleed Tahir
               </p>
             </li>
             <li>
               <a
-                href="https://example.com/paper2"
+                href="https://nhess.copernicus.org/articles/23/3305/2023/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-lg font-semibold text-primary underline hover:text-primary-foreground transition-colors"
               >
-                Title of Research Paper 2
+                Sentinel-1-based analysis of the severe flood over Pakistan 2022
               </a>
               <p className="text-sm text-muted-foreground mt-1">
-                Short description or authors.
+                By Florian Roth, Bernhard Bauer-Marschallinger, Mark Edwin Tupas, Christoph Reimer, Peter Salamon, and Wolfgang Wagner
               </p>
             </li>
             {/* Add more papers as needed */}
