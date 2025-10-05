@@ -11,7 +11,7 @@ export function HeroSection() {
           backgroundImage: "url('/IMPORTANCE-OF-WASTE-MANAGEMENT.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.15, // Adjust opacity as needed
+          opacity: 0.45, // Adjust opacity as needed
           pointerEvents: "none",
         }}
       />
