@@ -8,7 +8,7 @@ export function Navigation() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">CA</span>
           </div>
-          <span className="text-xl font-semibold">CleanAI</span>
+          <span className="text-4xl font-bold mb-4 text-primary">Clean</span><span className="text-xl font-semibold">AI</span>
         </div>
         <div className="hidden md:flex items-center space-x-6 text-sm text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">

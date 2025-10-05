@@ -47,7 +47,7 @@ export function FeaturesSection() {
     <section id="features" className="py-24 px-6 bg-card/30">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">Our solution</h2>
+          <h2 className="text-4xl font-bold mb-4 text-primary">Our solution</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Advanced AI capabilities designed for modern urban challenges
           </p>

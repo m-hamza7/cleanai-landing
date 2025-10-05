@@ -36,7 +36,7 @@ export function TechnologySection() {
     <section id="technology" className="py-24 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">Advanced Technology Stack</h2>
+          <h2 className="text-4xl font-bold mb-4 text-primary">Advanced Technology Stack</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Built with cutting-edge AI and modern infrastructure for scalable urban solutions
           </p>

@@ -36,7 +36,7 @@ export function ImpactSection() {
     <section id="impact" className="py-24 px-6 bg-card/30">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">Transforming Urban Sustainability</h2>
+          <h2 className="text-4xl font-bold mb-4 text-primary">Transforming Urban Sustainability</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             CleanAI addresses critical urban challenges in cities like Karachi, where millions of tons of waste and
             monsoon flooding create complex environmental and public health issues
