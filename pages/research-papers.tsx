@@ -1,12 +1,8 @@
-import React from "react";
-
 export default function ResearchPapers() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="max-w-4xl mx-auto py-16 px-4">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-primary">
-          Research Papers Considered
-        </h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-primary">Research Papers Considered</h1>
         <div className="bg-card rounded-lg shadow border border-border p-8">
           <ul className="space-y-6">
             <li>
@@ -16,7 +12,8 @@ export default function ResearchPapers() {
                 rel="noopener noreferrer"
                 className="text-lg font-semibold text-primary underline hover:text-primary-foreground transition-colors"
               >
-                Improved flood mapping for efficient policy design by fusion of Sentinel-1, Sentinel-2, and Landsat-9 imagery to identify population and infrastructure exposed to floods
+                Improved flood mapping for efficient policy design by fusion of Sentinel-1, Sentinel-2, and Landsat-9
+                imagery to identify population and infrastructure exposed to floods
               </a>
               <p className="text-sm text-muted-foreground mt-1">
                 By Usman NazirZubair KhalidMomin Uppal Muhammad Waleed Tahir
@@ -32,7 +29,8 @@ export default function ResearchPapers() {
                 Sentinel-1-based analysis of the severe flood over Pakistan 2022
               </a>
               <p className="text-sm text-muted-foreground mt-1">
-                By Florian Roth, Bernhard Bauer-Marschallinger, Mark Edwin Tupas, Christoph Reimer, Peter Salamon, and Wolfgang Wagner
+                By Florian Roth, Bernhard Bauer-Marschallinger, Mark Edwin Tupas, Christoph Reimer, Peter Salamon, and
+                Wolfgang Wagner
               </p>
             </li>
             {/* Add more papers as needed */}
@@ -40,5 +38,5 @@ export default function ResearchPapers() {
         </div>
       </div>
     </main>
-  );
+  )
 }
