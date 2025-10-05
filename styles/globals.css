@@ -122,4 +122,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: url('\styles\IMPORTANCE-OF-WASTE-MANAGEMENT.jpg') no-repeat center center/cover;
+    opacity: 0.15; /* Adjust for desired transparency */
+    pointer-events: none;
+  }
 }
