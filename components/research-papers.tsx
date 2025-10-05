@@ -33,6 +33,31 @@ export default function ResearchPapers() {
                 Wolfgang Wagner
               </p>
             </li>
+
+             <li>
+              <a
+                href="https://www.researchgate.net/publication/395871475_Extreme_Flooding_in_Pakistan_An_AI-Powered_Framework_for_Enhanced_Urban_Flood_Management_System"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lg font-semibold text-primary underline hover:text-white transition-colors"
+              >
+                Extreme Flooding in Pakistan: An AI-Powered Framework for Enhanced Urban Flood Management System
+              </a>
+              <p className="text-sm text-muted-foreground mt-1">
+                By Muhammad Yasir Zaheen, Dure Jabeen, Ali Akbar Siddiqui, and Muhammad Aamir
+            </li>
+              <li>
+              <a
+                href="https://www.nature.com/articles/s41598-025-08461-w"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lg font-semibold text-primary underline hover:text-white transition-colors"
+              >
+                Intelligent waste sorting for urban sustainability using deep learning
+              </a>
+              <p className="text-sm text-muted-foreground mt-1">
+                By Gulzar Ahmad, Fizza Muhammad Aleem, Tahir Alyas, Qaiser Abbas, Waqas Nawaz, Taher M. Ghazal, Abdul Aziz, Saira Aleem, Nadia Tabassum & Aidarus Mohamed Ibrahim
+            </li>
             {/* Add more papers as needed */}
           </ul>
         </div>
