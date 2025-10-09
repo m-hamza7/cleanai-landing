@@ -1,14 +1,13 @@
+import { Logo } from "@/components/logo"
+
 export function Footer() {
   return (
     <footer className="border-t border-border py-12 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">CA</span>
-              </div>
-              <span className="text-xl font-semibold">CleanAI</span>
+            <div className="mb-4">
+              <Logo />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               AI-powered waste management and flood prevention system for smart, sustainable cities.

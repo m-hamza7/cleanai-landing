@@ -1,15 +1,11 @@
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/components/logo"
 
 export function Navigation() {
   return (
     <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto">
       <div className="flex items-center space-x-8">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">CA</span>
-          </div>
-          <span className="text-4xl font-bold mb-4 text-primary">Clean</span><span className="text-xl font-semibold">AI</span>
-        </div>
+        <Logo size="lg" />
         <div className="hidden md:flex items-center space-x-6 text-sm text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">
             Features
