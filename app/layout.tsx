@@ -11,6 +11,20 @@ export const metadata: Metadata = {
   description:
     "Revolutionary AI system for smart cities that detects waste, optimizes municipal response, and prevents urban flooding through intelligent automation.",
   generator: "CleanAI",
+  icons: {
+    icon: [
+      {
+        url: "/logo2.jpg",
+        type: "image/jpeg",
+      },
+    ],
+    apple: [
+      {
+        url: "/logo2.jpg",
+        type: "image/jpeg",
+      },
+    ],
+  },
 }
 
 export default function RootLayout({

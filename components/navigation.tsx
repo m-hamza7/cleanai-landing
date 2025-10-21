@@ -30,7 +30,9 @@ export function Navigation() {
       </div>
       <div className="flex items-center space-x-4">
         
-        <Button size="sm">Get Started</Button>
+        <Button size="sm" asChild>
+          <a href="/dashboard">Get Started</a>
+        </Button>
       </div>
     </nav>
   )
