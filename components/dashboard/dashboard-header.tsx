@@ -1,3 +1,5 @@
+'use client'
+
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { Bell, Settings, User, Home } from "lucide-react"

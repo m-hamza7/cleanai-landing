@@ -1,6 +1,8 @@
+'use client'
+
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { StatsOverview } from "@/components/dashboard/stats-overview"
-import { WasteDetectionMap } from "@/components/dashboard/waste-detection-map"
+import { WasteDetectionMap } from "@/components/dashboard/waste-detection-map-simple"
 import { FleetManagement } from "@/components/dashboard/fleet-management"
 import { FloodRiskAssessment } from "@/components/dashboard/flood-risk-assessment"
 import { AlertsPanel } from "@/components/dashboard/alerts-panel"

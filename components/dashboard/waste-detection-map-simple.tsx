@@ -4,22 +4,6 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, Camera, Satellite, AlertTriangle, CheckCircle } from "lucide-react"
-import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
-
-// Dynamically import the entire map component to avoid SSR issues
-const LeafletMap = dynamic(() => import('./leaflet-map'), { 
-  ssr: false,
-  loading: () => (
-    <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
-      <div className="text-center">
-        <MapPin className="h-12 w-12 text-primary mx-auto mb-2 animate-pulse" />
-        <p className="text-sm text-muted-foreground">Loading Interactive Map...</p>
-        <p className="text-xs text-muted-foreground mt-1">Karachi, Pakistan</p>
-      </div>
-    </div>
-  )
-})
 
 interface WasteLocation {
   id: string
@@ -96,12 +80,7 @@ const getStatusColor = (type: string) => {
   }
 }
 
-export function WasteDetectionMap() {  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
+export function WasteDetectionMap() {
   return (
     <div className="space-y-4">
       <Card className="p-6">
@@ -118,16 +97,69 @@ export function WasteDetectionMap() {  const [isClient, setIsClient] = useState(
             </Button>
           </div>
         </div>
-          {/* Interactive OpenStreetMap */}
-        <div className="h-96 rounded-lg overflow-hidden mb-4">
-          {isClient && <LeafletMap locations={mockWasteLocations} />}
+        
+        {/* Map Placeholder with Mock Markers */}
+        <div className="relative h-96 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg mb-4 overflow-hidden">
+          {/* Background pattern to simulate map */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="grid grid-cols-8 grid-rows-6 h-full w-full">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div key={i} className="border border-gray-200" />
+              ))}
+            </div>
+          </div>
+          
+          {/* Center indicator */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center z-10">
+              <MapPin className="h-8 w-8 text-primary mx-auto mb-1" />
+              <p className="text-xs font-medium text-gray-700">Karachi, Pakistan</p>
+              <p className="text-xs text-gray-500">Interactive Map (Demo)</p>
+            </div>
+          </div>
+          
+          {/* Mock waste location markers */}
+          {mockWasteLocations.map((location, index) => {
+            const colors = {
+              critical: 'bg-red-500 animate-ping',
+              high: 'bg-orange-500',
+              medium: 'bg-yellow-500',
+              low: 'bg-blue-500',
+              resolved: 'bg-green-500'
+            }
+            
+            // Simulate positioning based on lat/lng
+            const top = 20 + (index * 15) + (Math.random() * 10)
+            const left = 25 + (index * 18) + (Math.random() * 15)
+            
+            return (
+              <div
+                key={location.id}
+                className={`absolute w-4 h-4 rounded-full ${colors[location.type]} border-2 border-white shadow-lg cursor-pointer transform hover:scale-125 transition-transform`}
+                style={{
+                  top: `${Math.min(top, 85)}%`,
+                  left: `${Math.min(left, 85)}%`,
+                }}
+                title={location.description}
+              >
+                {location.type === 'critical' && (
+                  <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75" />
+                )}
+              </div>
+            )
+          })}
+          
+          {/* Map attribution */}
+          <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white/80 px-2 py-1 rounded">
+            OpenStreetMap Demo
+          </div>
         </div>
 
         {/* Legend */}
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-4 flex-wrap gap-2">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-red-600 rounded-full"></div>
+              <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse"></div>
               <span>Critical</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -165,7 +197,7 @@ export function WasteDetectionMap() {  const [isClient, setIsClient] = useState(
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
                   <AlertTriangle className={`h-4 w-4 ${
-                    location.type === 'critical' ? 'text-red-600' :
+                    location.type === 'critical' ? 'text-red-600 animate-pulse' :
                     location.type === 'high' ? 'text-orange-600' :
                     'text-yellow-600'
                   }`} />
