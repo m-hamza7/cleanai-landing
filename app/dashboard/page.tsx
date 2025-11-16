@@ -6,6 +6,7 @@ import { WasteDetectionMap } from "@/components/dashboard/waste-detection-map-si
 import { FleetManagement } from "@/components/dashboard/fleet-management"
 import { FloodRiskAssessment } from "@/components/dashboard/flood-risk-assessment"
 import { AlertsPanel } from "@/components/dashboard/alerts-panel"
+import { UserReportsPanel } from "@/components/dashboard/user-reports-panel"
 
 export default function DashboardPage() {
   return (
@@ -29,11 +30,15 @@ export default function DashboardPage() {
               <AlertsPanel />
             </div>
           </div>
-          
-          {/* Bottom Section */}
+            {/* Bottom Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FleetManagement />
             <FloodRiskAssessment />
+          </div>
+
+          {/* Citizen Reports Section */}
+          <div className="w-full">
+            <UserReportsPanel />
           </div>
         </div>
       </main>

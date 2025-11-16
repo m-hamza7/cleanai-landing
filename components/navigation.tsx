@@ -29,9 +29,11 @@ export function Navigation() {
         </div>
       </div>
       <div className="flex items-center space-x-4">
-        
+        <Button variant="outline" size="sm" asChild>
+          <a href="/login">Citizen Login</a>
+        </Button>
         <Button size="sm" asChild>
-          <a href="/dashboard">Get Started</a>
+          <a href="/dashboard">Admin Dashboard</a>
         </Button>
       </div>
     </nav>
