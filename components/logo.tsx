@@ -10,15 +10,15 @@ interface LogoProps {
 
 export function Logo({ className = '', size = 'md' }: LogoProps) {
   const dimensions = {
-    sm: { width: 120, height: 32 },
-    md: { width: 150, height: 40 },
-    lg: { width: 180, height: 48 }
+    sm: { width: 450, height: 70 },
+    md: { width: 350, height: 100 },
+    lg: { width: 400, height: 120 }
   }
 
   const sizeClasses = {
-    sm: 'h-8',
-    md: 'h-10',
-    lg: 'h-12'
+    sm: 'h-20',
+    md: 'h-25',
+    lg: 'h-30'
   }
 
   return (
