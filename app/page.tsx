@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/navigation"
 import { HeroSection } from "@/components/hero-section"
+import { DemoVideoSection } from "@/components/demo-video-section"
 import { WorkflowSection } from "@/components/workflow-section"
 import { FeaturesSection } from "@/components/features-section"
 import { TechnologySection } from "@/components/technology-section"
@@ -14,6 +15,7 @@ export default function HomePage() {
 
       <Navigation />
       <HeroSection />
+      <DemoVideoSection />
       <ProblemIdentificationSection />
       <FeaturesSection />
       <WorkflowSection />
