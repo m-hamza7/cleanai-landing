@@ -10,7 +10,7 @@ export default function ResearchPapers() {
                 href="https://www.researchgate.net/publication/371490458_Improved_flood_mapping_for_efficient_policy_design_by_fusion_of_Sentinel-1_Sentinel-2_and_Landsat-9_imagery_to_identify_population_and_infrastructure_exposed_to_floods"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-lg font-semibold text-primary underline hover:text-white transition-colors"
+                className="text-lg font-semibold text-primary underline hover:text-black transition-colors"
               >
                 Improved flood mapping for efficient policy design by fusion of Sentinel-1, Sentinel-2, and Landsat-9
                 imagery to identify population and infrastructure exposed to floods
@@ -24,7 +24,7 @@ export default function ResearchPapers() {
                 href="https://nhess.copernicus.org/articles/23/3305/2023/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-lg font-semibold text-primary underline hover:text-white transition-colors"
+                className="text-lg font-semibold text-primary underline hover:text-black transition-colors"
               >
                 Sentinel-1-based analysis of the severe flood over Pakistan 2022
               </a>
@@ -38,7 +38,7 @@ export default function ResearchPapers() {
                 href="https://www.researchgate.net/publication/395871475_Extreme_Flooding_in_Pakistan_An_AI-Powered_Framework_for_Enhanced_Urban_Flood_Management_System"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-lg font-semibold text-primary underline hover:text-white transition-colors"
+                className="text-lg font-semibold text-primary underline hover:text-black transition-colors"
               >
                 Extreme Flooding in Pakistan: An AI-Powered Framework for Enhanced Urban Flood Management System
               </a>
@@ -51,7 +51,7 @@ export default function ResearchPapers() {
                 href="https://www.nature.com/articles/s41598-025-08461-w"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-lg font-semibold text-primary underline hover:text-white transition-colors"
+                className="text-lg font-semibold text-primary underline hover:text-black transition-colors"
               >
                 Intelligent waste sorting for urban sustainability using deep learning
               </a>

@@ -12,7 +12,8 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
   const dimensions = {
     sm: { width: 450, height: 70 },
     md: { width: 350, height: 100 },
-    lg: { width: 400, height: 120 }
+    lg: { width
+      : 400, height: 120 }
   }
 
   const sizeClasses = {

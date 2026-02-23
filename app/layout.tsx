@@ -7,6 +7,10 @@ import { Suspense } from "react"
 import "leaflet/dist/leaflet.css"
 import "./globals.css"
 
+import "./mymobile.css"
+import "./myc.tsx"
+
+
 export const metadata: Metadata = {
   title: "CleanAI - AI-Powered Waste Management & Flood Prevention",
   description:
@@ -36,8 +40,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+       
         <Suspense fallback={null}>{children}</Suspense>
+        
         <Analytics />
+
       </body>
     </html>
   )

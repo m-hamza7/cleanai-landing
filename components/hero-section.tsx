@@ -31,7 +31,7 @@ export function HeroSection() {
           optimization, and real-time flood risk assessment for cleaner, safer cities.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+        {/*<div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
           <Button size="lg" className="text-base px-8">
             View Live Demo
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -40,7 +40,7 @@ export function HeroSection() {
             <Play className="mr-2 h-4 w-4" />
             Watch System Overview
           </Button>
-        </div>
+        </div>*/}
 
         <div className="text-sm text-muted-foreground">
           Trusted by municipal authorities • Powered by YOLOv8 & R-CNN • Real-time satellite integration

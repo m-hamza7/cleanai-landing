@@ -6,10 +6,12 @@ import { TechnologySection } from "@/components/technology-section"
 import { ImpactSection } from "@/components/impact-section"
 import { Footer } from "@/components/footer"
 import { ProblemIdentificationSection } from "@/components/problem-identification-section"
+import { Myc } from "./myc"
 
 export default function HomePage() {
   return (
     <main className="min-h-screen">
+
       <Navigation />
       <HeroSection />
       <ProblemIdentificationSection />
