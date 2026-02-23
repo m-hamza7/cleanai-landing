@@ -25,12 +25,7 @@
 - **[MOBILE_TESTING_GUIDE.md](./MOBILE_TESTING_GUIDE.md)** - Responsive design testing
 - **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - What was built
 
-### Live Application
-- **Homepage**: [http://localhost:3000](http://localhost:3000)
-- **Login**: [http://localhost:3000/login](http://localhost:3000/login)
-- **User Dashboard**: [http://localhost:3000/user-dashboard](http://localhost:3000/user-dashboard)
-- **Admin Dashboard**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
-- **Research**: [http://localhost:3000/research-papers](http://localhost:3000/research-papers)
+
 
 ---
 
@@ -663,3 +658,4 @@ This project is part of a Final Year Project (FYP) for BCS-7E.
 **Last Updated**: November 16, 2025  
 **Version**: 1.0.0  
 **Status**: ✅ Prototype Complete
+
