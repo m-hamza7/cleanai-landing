@@ -16,6 +16,7 @@ COPY classify.py ./
 
 # Model is expected at /app/best.pt by default.
 ENV MODEL_PATH=/app/best.pt
+ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
 ENV PYTHONUNBUFFERED=1
 
 CMD ["python", "classify.py"]

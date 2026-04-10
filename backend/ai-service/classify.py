@@ -6,6 +6,7 @@ Runs on port 5001.
 
 import os
 import sys
+import urllib.request
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from ultralytics import YOLO
@@ -21,12 +22,32 @@ CORS(app)
 # 2) /app/best.pt (Docker default)
 # 3) Legacy repo path ../../model/best.pt for local development
 MODEL_PATH = os.environ.get('MODEL_PATH', '/app/best.pt')
-if not os.path.exists(MODEL_PATH):
+MODEL_URL = os.environ.get('MODEL_URL', '').strip()
+
+
+def ensure_model_file(path: str) -> str:
+    if os.path.exists(path):
+        return path
+
     legacy_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), '..', '..', 'model', 'best.pt')
     )
     if os.path.exists(legacy_path):
-        MODEL_PATH = legacy_path
+        return legacy_path
+
+    if MODEL_URL:
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        print(f"⬇️  MODEL_PATH not found. Downloading model from MODEL_URL to {path} ...")
+        urllib.request.urlretrieve(MODEL_URL, path)
+        print("✅ Model downloaded successfully")
+        return path
+
+    raise FileNotFoundError(
+        f"Model not found at '{path}'. Set MODEL_PATH to a valid file or provide MODEL_URL."
+    )
+
+
+MODEL_PATH = ensure_model_file(MODEL_PATH)
 
 print(f"🔄 Loading YOLO model from {MODEL_PATH} ...")
 model = YOLO(MODEL_PATH, task='detect')
