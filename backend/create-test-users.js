@@ -1,7 +1,7 @@
 // Create Test User for CleanAI
 require('dotenv').config();
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 async function createTestUsers() {
   console.log('\n🔧 Creating test users in database...\n');
