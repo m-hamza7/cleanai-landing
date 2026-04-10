@@ -14,6 +14,8 @@ import { api, type Report } from "@/lib/api-client"
 
 export default function UserDashboardPage() {
   const router = useRouter()
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+  const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/, "")
   const [user, setUser] = useState<{ username: string } | null>(null)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>("")
@@ -205,7 +207,7 @@ export default function UserDashboardPage() {
 
       // Call backend API directly with FormData
       const token = localStorage.getItem('authToken')
-      const response = await fetch('http://192.168.100.3:5000/api/reports', {
+      const response = await fetch(`${apiBaseUrl}/reports`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -540,7 +542,7 @@ export default function UserDashboardPage() {
                         className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
                       >                        {report.image_url && (
                           <img
-                            src={`http://192.168.100.3:5000${report.image_url}`}
+                            src={`${backendBaseUrl}${report.image_url}`}
                             alt="Waste report"
                             className="w-full h-32 object-cover rounded-md mb-2"
                           />
