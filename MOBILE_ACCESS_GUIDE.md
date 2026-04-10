@@ -78,7 +78,7 @@ Make sure your phone is connected to the **same WiFi network** as your computer.
 
 ### Frontend Server
 ```
-▲ Next.js 14.2.16
+▲ Next.js 14.2.35
 - Local:   http://localhost:3000
 - Network: http://0.0.0.0:3000
 ✓ Ready
@@ -365,3 +365,4 @@ Password: hamza
 3. Login and test!
 
 If you need to change IP or have issues, refer to the troubleshooting section above.
+

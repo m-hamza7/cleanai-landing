@@ -44,7 +44,7 @@
 
 ### Frontend Server ✅
 ```
-▲ Next.js 14.2.16
+▲ Next.js 14.2.35
 ✓ Ready in 3.7s
 - Local: http://localhost:3000
 ```
@@ -296,3 +296,4 @@ curl http://localhost:3000
 
 **If login works:** Submit a test report and verify in database!  
 **If it still fails:** Check browser console (F12) and let me know the exact error message.
+
