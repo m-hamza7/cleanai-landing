@@ -23,6 +23,7 @@ CORS(app)
 # 3) Legacy repo path ../../model/best.pt for local development
 MODEL_PATH = os.environ.get('MODEL_PATH', '/app/best.pt')
 MODEL_URL = os.environ.get('MODEL_URL', '').strip()
+DEFAULT_MODEL_URL = 'https://raw.githubusercontent.com/m-hamza7/cleanai-landing/main/model/best.pt'
 
 
 def ensure_model_file(path: str) -> str:
@@ -35,12 +36,18 @@ def ensure_model_file(path: str) -> str:
     if os.path.exists(legacy_path):
         return legacy_path
 
-    if MODEL_URL:
+    download_url = MODEL_URL or DEFAULT_MODEL_URL
+    if download_url:
         os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-        print(f"⬇️  MODEL_PATH not found. Downloading model from MODEL_URL to {path} ...")
-        urllib.request.urlretrieve(MODEL_URL, path)
-        print("✅ Model downloaded successfully")
-        return path
+        print(f"⬇️  MODEL_PATH not found. Downloading model from {download_url} to {path} ...")
+        try:
+            urllib.request.urlretrieve(download_url, path)
+            print("✅ Model downloaded successfully")
+            return path
+        except Exception as err:
+            raise FileNotFoundError(
+                f"Failed to download model from '{download_url}': {err}"
+            ) from err
 
     raise FileNotFoundError(
         f"Model not found at '{path}'. Set MODEL_PATH to a valid file or provide MODEL_URL."
