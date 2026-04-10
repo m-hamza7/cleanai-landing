@@ -32,13 +32,31 @@ async function fetchAPI<T>(
       },
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    const rawBody = await response.text();
+    let data: any = null;
 
-    if (!response.ok) {
-      throw new Error(data.message || `API Error: ${response.status}`);
+    if (rawBody) {
+      try {
+        data = JSON.parse(rawBody);
+      } catch {
+        if (!response.ok) {
+          throw new Error(
+            `API Error ${response.status} at ${url}. Non-JSON response: ${rawBody.slice(0, 160)}`
+          );
+        }
+
+        throw new Error(
+          `Invalid JSON response from ${url}. Content-Type: ${contentType || 'unknown'}`
+        );
+      }
     }
 
-    return data;
+    if (!response.ok) {
+      throw new Error(data?.error || data?.message || `API Error: ${response.status}`);
+    }
+
+    return (data as T);
   } catch (error) {
     console.error('API Error:', error);
     throw error;
@@ -197,10 +215,16 @@ export const reportsAPI = {
       body: formData,
     });
 
-    const data = await response.json();
+    const rawBody = await response.text();
+    let data: any = null;
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      throw new Error(`Invalid JSON response from ${API_BASE_URL}/reports`);
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to create report');
+      throw new Error(data.error || data.message || 'Failed to create report');
     }
 
     return data.report;
