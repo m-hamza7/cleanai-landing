@@ -3,6 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
+const FormData = require('form-data');
 const db = require('../config/database');
 const { verifyToken } = require('./auth');
 
@@ -44,24 +46,28 @@ const upload = multer({
 async function classifyImage(imagePath) {
   try {
     const absolutePath = path.resolve(imagePath);
-    console.log(`🧠 Sending image to AI service: ${absolutePath}`);
-
-    const response = await fetch(`${AI_SERVICE_URL}/classify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_path: absolutePath }),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `AI service returned ${response.status}`);
+    if (!fs.existsSync(absolutePath)) {
+      throw new Error(`Image not found on backend: ${absolutePath}`);
     }
 
-    const data = await response.json();
+    console.log(`🧠 Sending image to AI service: ${absolutePath}`);
+
+    const formData = new FormData();
+    formData.append('image', fs.createReadStream(absolutePath));
+
+    const response = await axios.post(`${AI_SERVICE_URL}/classify`, formData, {
+      headers: formData.getHeaders(),
+      timeout: 60000,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+
+    const data = response.data;
     console.log(`✅ AI classification: ${data.waste_type} (${(data.confidence * 100).toFixed(1)}%) severity=${data.severity_level}`);
     return data;
   } catch (error) {
-    console.error('⚠️  AI classification failed:', error.message);
+    const errMsg = error.response?.data?.error || error.message;
+    console.error('⚠️  AI classification failed:', errMsg);
     return null; // non-blocking — report is still saved
   }
 }
