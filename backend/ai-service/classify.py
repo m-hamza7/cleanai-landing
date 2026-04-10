@@ -16,8 +16,17 @@ app = Flask(__name__)
 CORS(app)
 
 # ── Load model at startup ──────────────────────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'model', 'best.pt')
-MODEL_PATH = os.path.abspath(MODEL_PATH)
+# Priority:
+# 1) MODEL_PATH env var (recommended in hosted deployments)
+# 2) /app/best.pt (Docker default)
+# 3) Legacy repo path ../../model/best.pt for local development
+MODEL_PATH = os.environ.get('MODEL_PATH', '/app/best.pt')
+if not os.path.exists(MODEL_PATH):
+    legacy_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', 'model', 'best.pt')
+    )
+    if os.path.exists(legacy_path):
+        MODEL_PATH = legacy_path
 
 print(f"🔄 Loading YOLO model from {MODEL_PATH} ...")
 model = YOLO(MODEL_PATH, task='detect')

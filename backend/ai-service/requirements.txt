@@ -1,4 +1,13 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 flask==3.0.3
 flask-cors==4.0.1
-ultralytics==8.3.174
 pillow==10.4.0
+
+# Keep the stack CPU-only and compatible with Python 3.13 wheels.
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
+
+# Headless OpenCV avoids GUI/X11 runtime dependencies like libxcb.so.1.
+opencv-python-headless==4.10.0.84
+ultralytics==8.3.174
