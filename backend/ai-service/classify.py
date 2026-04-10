@@ -129,7 +129,8 @@ def classify():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('AI_SERVICE_PORT', 5001))
+    # Railway injects PORT; keep AI_SERVICE_PORT as optional fallback for local/dev.
+    port = int(os.environ.get('PORT', os.environ.get('AI_SERVICE_PORT', 5001)))
     print(f"\n🧠 CleanAI Waste Classification Service starting on port {port}")
     print(f"   POST http://localhost:{port}/classify")
     print(f"   GET  http://localhost:{port}/health\n")
