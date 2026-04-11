@@ -47,15 +47,28 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n🚀 CleanAI Backend Server running on http://localhost:${PORT}`);
-  console.log(`📊 API Endpoints:`);
-  console.log(`   - Health: http://localhost:${PORT}/api/health`);
-  console.log(`   - Auth: http://localhost:${PORT}/api/auth/*`);
-  console.log(`   - Reports: http://localhost:${PORT}/api/reports/*`);
-  console.log(`   - Users: http://localhost:${PORT}/api/users/*`);
-  console.log(`   - Alerts: http://localhost:${PORT}/api/alerts/*\n`);
-});
+async function startServer() {
+  try {
+    if (typeof reportRoutes.ensureReportWorkflowSchema === 'function') {
+      await reportRoutes.ensureReportWorkflowSchema();
+      console.log('✅ Report workflow schema migration checked on startup');
+    }
+
+    app.listen(PORT, () => {
+      console.log(`\n🚀 CleanAI Backend Server running on http://localhost:${PORT}`);
+      console.log(`📊 API Endpoints:`);
+      console.log(`   - Health: http://localhost:${PORT}/api/health`);
+      console.log(`   - Auth: http://localhost:${PORT}/api/auth/*`);
+      console.log(`   - Reports: http://localhost:${PORT}/api/reports/*`);
+      console.log(`   - Users: http://localhost:${PORT}/api/users/*`);
+      console.log(`   - Alerts: http://localhost:${PORT}/api/alerts/*\n`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to initialize report schema:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;

@@ -11,25 +11,47 @@ const { verifyToken } = require('./auth');
 // AI Classification Service URL
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5001';
 let reportSchemaEnsured = false;
+let reportSchemaEnsuringPromise = null;
 
 async function ensureReportWorkflowSchema() {
   if (reportSchemaEnsured) {
     return;
   }
 
-  await db.query(`
-    ALTER TABLE reports
-    ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL,
-    ADD COLUMN IF NOT EXISTS pickup_scheduled_at DATETIME NULL,
-    ADD COLUMN IF NOT EXISTS status_updated_at DATETIME NULL
-  `);
+  if (reportSchemaEnsuringPromise) {
+    await reportSchemaEnsuringPromise;
+    return;
+  }
 
-  await db.query(`
-    ALTER TABLE reports
-    MODIFY COLUMN status VARCHAR(256) NOT NULL DEFAULT 'pending'
-  `);
+  reportSchemaEnsuringPromise = (async () => {
+    const [columns] = await db.query('SHOW COLUMNS FROM reports');
+    const columnNames = new Set(columns.map((column) => column.Field));
 
-  reportSchemaEnsured = true;
+    if (!columnNames.has('rejection_reason')) {
+      await db.query('ALTER TABLE reports ADD COLUMN rejection_reason TEXT NULL');
+    }
+
+    if (!columnNames.has('pickup_scheduled_at')) {
+      await db.query('ALTER TABLE reports ADD COLUMN pickup_scheduled_at DATETIME NULL');
+    }
+
+    if (!columnNames.has('status_updated_at')) {
+      await db.query('ALTER TABLE reports ADD COLUMN status_updated_at DATETIME NULL');
+    }
+
+    await db.query(`
+      ALTER TABLE reports
+      MODIFY COLUMN status VARCHAR(256) NOT NULL DEFAULT 'pending'
+    `);
+
+    reportSchemaEnsured = true;
+  })();
+
+  try {
+    await reportSchemaEnsuringPromise;
+  } finally {
+    reportSchemaEnsuringPromise = null;
+  }
 }
 
 function toMySqlDateTime(input) {
@@ -121,8 +143,6 @@ async function classifyImage(imagePath) {
 // Create new report
 router.post('/', verifyToken, upload.single('image'), async (req, res) => {
   try {
-    await ensureReportWorkflowSchema();
-
     const { latitude, longitude, gps_accuracy } = req.body;
     const user_id = req.user.user_id;
 
@@ -185,8 +205,6 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
 // Get all reports (admin) or user's reports
 router.get('/', verifyToken, async (req, res) => {
   try {
-    await ensureReportWorkflowSchema();
-
     const { role, user_id } = req.user;
     const { status, limit = 50, offset = 0 } = req.query;
 
@@ -236,8 +254,6 @@ router.get('/', verifyToken, async (req, res) => {
 // Get single report by ID
 router.get('/:id', verifyToken, async (req, res) => {
   try {
-    await ensureReportWorkflowSchema();
-
     const report_id = req.params.id;
 
     const [reports] = await db.query(
@@ -269,8 +285,6 @@ router.get('/:id', verifyToken, async (req, res) => {
 // Update report status (admin only)
 router.patch('/:id/status', verifyToken, async (req, res) => {
   try {
-    await ensureReportWorkflowSchema();
-
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
@@ -391,5 +405,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete report', message: error.message });
   }
 });
+
+router.ensureReportWorkflowSchema = ensureReportWorkflowSchema;
 
 module.exports = router;
