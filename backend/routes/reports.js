@@ -10,6 +10,52 @@ const { verifyToken } = require('./auth');
 
 // AI Classification Service URL
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5001';
+let reportSchemaEnsured = false;
+
+async function ensureReportWorkflowSchema() {
+  if (reportSchemaEnsured) {
+    return;
+  }
+
+  await db.query(`
+    ALTER TABLE reports
+    ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL,
+    ADD COLUMN IF NOT EXISTS pickup_scheduled_at DATETIME NULL,
+    ADD COLUMN IF NOT EXISTS status_updated_at DATETIME NULL
+  `);
+
+  await db.query(`
+    ALTER TABLE reports
+    MODIFY COLUMN status VARCHAR(256) NOT NULL DEFAULT 'pending'
+  `);
+
+  reportSchemaEnsured = true;
+}
+
+function toMySqlDateTime(input) {
+  if (input === null || input === undefined) {
+    return null;
+  }
+
+  const value = String(input).trim();
+  if (!value) {
+    return null;
+  }
+
+  const sqlDateTimePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/;
+  const normalizedInput = sqlDateTimePattern.test(value) && value.length === 16 ? `${value}:00` : value;
+  const parseValue = sqlDateTimePattern.test(normalizedInput)
+    ? normalizedInput.replace(' ', 'T')
+    : normalizedInput;
+
+  const parsed = new Date(parseValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+  return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}:${pad2(parsed.getSeconds())}`;
+}
 
 // Configure multer for image uploads
 const storage = multer.diskStorage({
@@ -75,6 +121,8 @@ async function classifyImage(imagePath) {
 // Create new report
 router.post('/', verifyToken, upload.single('image'), async (req, res) => {
   try {
+    await ensureReportWorkflowSchema();
+
     const { latitude, longitude, gps_accuracy } = req.body;
     const user_id = req.user.user_id;
 
@@ -87,8 +135,8 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
 
     // Insert report
     const [result] = await db.query(
-      `INSERT INTO reports (user_id, image_url, latitude, longitude, gps_accuracy, submitted_at, status) 
-       VALUES (?, ?, ?, ?, ?, NOW(), 'submitted')`,
+      `INSERT INTO reports (user_id, image_url, latitude, longitude, gps_accuracy, submitted_at, status, status_updated_at) 
+       VALUES (?, ?, ?, ?, ?, NOW(), 'pending', NOW())`,
       [user_id, image_url, latitude, longitude, gps_accuracy || 0]
     );
 
@@ -137,13 +185,15 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
 // Get all reports (admin) or user's reports
 router.get('/', verifyToken, async (req, res) => {
   try {
+    await ensureReportWorkflowSchema();
+
     const { role, user_id } = req.user;
     const { status, limit = 50, offset = 0 } = req.query;
 
     let query = `
       SELECT 
         r.report_id, r.user_id, r.image_url, r.latitude, r.longitude, 
-        r.gps_accuracy, r.submitted_at, r.status,
+        r.gps_accuracy, r.submitted_at, r.status, r.rejection_reason, r.pickup_scheduled_at, r.status_updated_at,
         u.name as user_name, u.email as user_email,
         ai.waste_type, ai.severity_level, ai.confidence_score,
         ct.assigned_to, ct.completion_status, ct.completed_at
@@ -186,6 +236,8 @@ router.get('/', verifyToken, async (req, res) => {
 // Get single report by ID
 router.get('/:id', verifyToken, async (req, res) => {
   try {
+    await ensureReportWorkflowSchema();
+
     const report_id = req.params.id;
 
     const [reports] = await db.query(
@@ -217,21 +269,59 @@ router.get('/:id', verifyToken, async (req, res) => {
 // Update report status (admin only)
 router.patch('/:id/status', verifyToken, async (req, res) => {
   try {
+    await ensureReportWorkflowSchema();
+
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
     const report_id = req.params.id;
-    const { status } = req.body;
+    const { status, rejection_reason, pickup_scheduled_at } = req.body;
 
-    const validStatuses = ['submitted', 'dispatched', 'resolved', 'rejected'];
+    const validStatuses = ['pending', 'received', 'rejected', 'scheduled_for_pickup'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
+    if (status === 'rejected' && (!rejection_reason || !String(rejection_reason).trim())) {
+      return res.status(400).json({ error: 'Rejection reason is required for rejected status' });
+    }
+
+    let normalizedPickupSchedule = null;
+
+    if (status === 'scheduled_for_pickup') {
+      if (!pickup_scheduled_at) {
+        return res.status(400).json({ error: 'pickup_scheduled_at is required for scheduled_for_pickup status' });
+      }
+
+      normalizedPickupSchedule = toMySqlDateTime(pickup_scheduled_at);
+      if (!normalizedPickupSchedule) {
+        return res.status(400).json({ error: 'pickup_scheduled_at must be a valid datetime' });
+      }
+
+      const scheduledDate = new Date(normalizedPickupSchedule.replace(' ', 'T'));
+      if (Number.isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({ error: 'pickup_scheduled_at must be a valid datetime' });
+      }
+
+      if (scheduledDate <= new Date()) {
+        return res.status(400).json({ error: 'pickup_scheduled_at must be in the future' });
+      }
+    }
+
     await db.query(
-      'UPDATE reports SET status = ? WHERE report_id = ?',
-      [status, report_id]
+      `UPDATE reports 
+       SET status = ?, 
+           rejection_reason = ?, 
+           pickup_scheduled_at = ?,
+           status_updated_at = NOW()
+       WHERE report_id = ?`,
+      [
+        status,
+        status === 'rejected' ? String(rejection_reason).trim() : null,
+        status === 'scheduled_for_pickup' ? normalizedPickupSchedule : null,
+        report_id
+      ]
     );
 
     // Log action

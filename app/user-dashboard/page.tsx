@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Camera, MapPin, Trash2, Upload, CheckCircle2, LogOut, Leaf, AlertCircle, Navigation, Brain } from "lucide-react"
 import { api, type Report } from "@/lib/api-client"
 
@@ -30,6 +37,7 @@ export default function UserDashboardPage() {
   const [isLoadingReports, setIsLoadingReports] = useState(true)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState("")
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [aiResult, setAiResult] = useState<{
     waste_type: string
     confidence: number
@@ -249,6 +257,36 @@ export default function UserDashboardPage() {
   const handleLogout = () => {
     api.auth.logout()
     router.push("/login")
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Pending"
+      case "received":
+        return "Recieved"
+      case "rejected":
+        return "Rejected"
+      case "scheduled_for_pickup":
+        return "Scheduled for Pickup"
+      default:
+        return status
+    }
+  }
+
+  const getStatusClassName = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-500 text-white"
+      case "received":
+        return "bg-blue-500 text-white"
+      case "rejected":
+        return "bg-red-500 text-white"
+      case "scheduled_for_pickup":
+        return "bg-emerald-600 text-white"
+      default:
+        return ""
+    }
   }
 
   if (!user) {
@@ -539,8 +577,10 @@ export default function UserDashboardPage() {
                     {reports.map((report) => (
                       <div
                         key={report.report_id}
-                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
-                      >                        {report.image_url && (
+                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedReport(report)}
+                      >
+                        {report.image_url && (
                           <img
                             src={`${backendBaseUrl}${report.image_url}`}
                             alt="Waste report"
@@ -553,10 +593,10 @@ export default function UserDashboardPage() {
                               {report.waste_type || 'Pending AI'}
                             </Badge>
                             <Badge
-                              variant={report.status === "resolved" ? "default" : "outline"}
-                              className="text-xs"
+                              variant="secondary"
+                              className={`text-xs ${getStatusClassName(report.status)}`}
                             >
-                              {report.status}
+                              {getStatusText(report.status)}
                             </Badge>
                           </div>
                           {report.confidence_score != null && (
@@ -569,9 +609,11 @@ export default function UserDashboardPage() {
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             {report.latitude?.toFixed(4)}, {report.longitude?.toFixed(4)}
-                          </p>                          <p className="text-xs text-muted-foreground">
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             {new Date(report.submitted_at || report.created_at || '').toLocaleString()}
                           </p>
+                          <p className="text-xs text-primary pt-1">Click to track status</p>
                         </div>
                       </div>
                     ))}
@@ -598,6 +640,60 @@ export default function UserDashboardPage() {
             </Card>
           </div>
         </div>
+
+        <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Report #{selectedReport?.report_id} Status Tracking</DialogTitle>
+              <DialogDescription>
+                Monitor latest updates from the admin team for your report.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedReport && (
+              <div className="space-y-4">
+                {selectedReport.image_url && (
+                  <img
+                    src={`${backendBaseUrl}${selectedReport.image_url}`}
+                    alt="Selected report"
+                    className="w-full h-48 object-cover rounded-md border"
+                  />
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Current Status</span>
+                  <Badge variant="secondary" className={getStatusClassName(selectedReport.status)}>
+                    {getStatusText(selectedReport.status)}
+                  </Badge>
+                </div>
+
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <p className="text-sm"><strong>Submitted:</strong> {new Date(selectedReport.submitted_at || '').toLocaleString()}</p>
+                  {selectedReport.status_updated_at && (
+                    <p className="text-sm"><strong>Last Updated:</strong> {new Date(selectedReport.status_updated_at).toLocaleString()}</p>
+                  )}
+                  {selectedReport.pickup_scheduled_at && (
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                      <strong>Pickup Scheduled:</strong> {new Date(selectedReport.pickup_scheduled_at).toLocaleString()}
+                    </p>
+                  )}
+                  {selectedReport.rejection_reason && (
+                    <p className="text-sm text-red-700 dark:text-red-400">
+                      <strong>Rejection Reason:</strong> {selectedReport.rejection_reason}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p>Pending: waiting for admin review.</p>
+                  <p>Recieved: report has been acknowledged.</p>
+                  <p>Scheduled for Pickup: cleanup team visit has been planned.</p>
+                  <p>Rejected: report was reviewed and rejected with reason.</p>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )

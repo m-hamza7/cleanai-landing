@@ -5,6 +5,7 @@ import { WorkflowSection } from "@/components/workflow-section"
 import { FeaturesSection } from "@/components/features-section"
 import { TechnologySection } from "@/components/technology-section"
 import { ImpactSection } from "@/components/impact-section"
+import { AboutTeamSection } from "@/components/about-team-section"
 import { Footer } from "@/components/footer"
 import { ProblemIdentificationSection } from "@/components/problem-identification-section"
 import { Myc } from "./myc"
@@ -21,6 +22,7 @@ export default function HomePage() {
       <WorkflowSection />
       <TechnologySection />
       <ImpactSection />
+      <AboutTeamSection />
       <Footer />
     </main>
   )

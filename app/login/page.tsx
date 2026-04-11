@@ -46,8 +46,9 @@ export default function LoginPage() {
     setLoginError("")
     setIsLoginLoading(true)
     try {
-      await api.auth.login({ email, password })
-      setTimeout(() => router.push("/user-dashboard"), 500)
+      const response = await api.auth.login({ email, password })
+      const targetRoute = response.user?.role === "admin" ? "/dashboard" : "/user-dashboard"
+      setTimeout(() => router.push(targetRoute), 500)
     } catch (err: any) {
       setLoginError(err.message || "Login failed. Please check your credentials.")
     } finally {

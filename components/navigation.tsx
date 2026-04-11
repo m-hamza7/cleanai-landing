@@ -19,6 +19,9 @@ export function Navigation() {
           <a href="#impact" className="hover:text-foreground transition-colors">
             Impact
           </a>
+          <a href="#our-team" className="hover:text-foreground transition-colors">
+            Our Team
+          </a>
 
           <a href="research-papers" className="hover:text-foreground transition-colors">
             Research Papers

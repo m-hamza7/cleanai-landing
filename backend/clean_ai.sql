@@ -113,7 +113,10 @@ CREATE TABLE `reports` (
   `longitude` float NOT NULL,
   `gps_accuracy` float NOT NULL,
   `submitted_at` datetime NOT NULL,
-  `status` varchar(256) NOT NULL
+  `status` varchar(256) NOT NULL DEFAULT 'pending',
+  `rejection_reason` text DEFAULT NULL,
+  `pickup_scheduled_at` datetime DEFAULT NULL,
+  `status_updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

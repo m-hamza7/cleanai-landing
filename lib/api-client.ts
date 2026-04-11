@@ -161,6 +161,9 @@ export interface Report {
   gps_accuracy?: number;
   submitted_at?: string;
   status: string;
+  rejection_reason?: string;
+  pickup_scheduled_at?: string;
+  status_updated_at?: string;
   // From JOIN with user table
   user_name?: string;
   user_email?: string;
@@ -244,11 +247,18 @@ export const reportsAPI = {
   updateStatus: async (
     reportId: number,
     status: string,
-    priority?: string
+    options?: {
+      rejection_reason?: string;
+      pickup_scheduled_at?: string;
+    }
   ): Promise<{ message: string; report: Report }> => {
     return fetchAPI(`/reports/${reportId}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, priority }),
+      body: JSON.stringify({
+        status,
+        rejection_reason: options?.rejection_reason,
+        pickup_scheduled_at: options?.pickup_scheduled_at,
+      }),
     });
   },
 
