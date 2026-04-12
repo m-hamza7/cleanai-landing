@@ -40,6 +40,36 @@ const formatLocalDateTimeForApi = (date: Date) => {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 }
 
+const formatReportDateTime = (value?: string | null) => {
+  if (!value) {
+    return ""
+  }
+
+  const trimmed = String(value).trim()
+  const localDateTimePattern = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::(\d{2}))?$/
+  const match = trimmed.match(localDateTimePattern)
+
+  if (match) {
+    const [, year, month, day, hour, minute, second] = match
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second || "0")
+    )
+    return parsed.toLocaleString()
+  }
+
+  const parsed = new Date(trimmed)
+  if (Number.isNaN(parsed.getTime())) {
+    return trimmed
+  }
+
+  return parsed.toLocaleString()
+}
+
 export function UserReportsPanel() {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
   const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/, "")
@@ -260,7 +290,7 @@ export function UserReportsPanel() {
 
                         {report.pickup_scheduled_at && (
                           <p className="text-xs text-emerald-700 dark:text-emerald-400 pt-1">
-                            <strong>Pickup:</strong> {new Date(report.pickup_scheduled_at).toLocaleString()}
+                            <strong>Pickup:</strong> {formatReportDateTime(report.pickup_scheduled_at)}
                           </p>
                         )}
                       </div>
