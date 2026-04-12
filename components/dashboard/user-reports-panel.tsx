@@ -34,6 +34,15 @@ const STATUS_LABELS: Record<string, string> = {
   scheduled_for_pickup: "Scheduled for Pickup",
 }
 
+type ReportFilter = "pending" | "received" | "rejected" | "scheduled_for_pickup"
+
+const FILTER_BUTTONS: Array<{ value: ReportFilter; label: string }> = [
+  { value: "pending", label: "New" },
+  { value: "received", label: "Received" },
+  { value: "rejected", label: "Rejected" },
+  { value: "scheduled_for_pickup", label: "Scheduled" },
+]
+
 const pad2 = (value: number) => String(value).padStart(2, "0")
 
 const formatLocalDateTimeForApi = (date: Date) => {
@@ -82,6 +91,9 @@ export function UserReportsPanel() {
   const [scheduleDialogReport, setScheduleDialogReport] = useState<Report | null>(null)
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined)
   const [scheduleTime, setScheduleTime] = useState("09:00")
+  const [activeFilter, setActiveFilter] = useState<ReportFilter>("pending")
+
+  const filteredReports = reports.filter((report) => report.status === activeFilter)
 
   useEffect(() => {
     loadReports()
@@ -205,13 +217,33 @@ export function UserReportsPanel() {
           Citizen Reports
         </CardTitle>
         <CardDescription>
-          User-submitted waste reports ({reports.length} total) with status management
+          User-submitted waste reports ({filteredReports.length} shown of {reports.length} total) with status management
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
           <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
+          </div>
+        )}
+
+        {!isLoading && reports.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {FILTER_BUTTONS.map((filter) => {
+              const count = reports.filter((report) => report.status === filter.value).length
+              const isActive = activeFilter === filter.value
+              return (
+                <Button
+                  key={filter.value}
+                  size="sm"
+                  variant={isActive ? "default" : "outline"}
+                  onClick={() => setActiveFilter(filter.value)}
+                  className="h-8"
+                >
+                  {filter.label} ({count})
+                </Button>
+              )
+            })}
           </div>
         )}
 
@@ -225,10 +257,16 @@ export function UserReportsPanel() {
             <p className="text-sm">No citizen reports yet</p>
             <p className="text-xs mt-1">Reports from the citizen portal will appear here</p>
           </div>
+        ) : filteredReports.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Camera className="h-12 w-12 mx-auto mb-3 opacity-20" />
+            <p className="text-sm">No {FILTER_BUTTONS.find((filter) => filter.value === activeFilter)?.label.toLowerCase()} reports</p>
+            <p className="text-xs mt-1">Switch status buttons above to view other reports</p>
+          </div>
         ) : (
           <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-4">
-              {reports.map((report) => (
+              {filteredReports.map((report) => (
                 <div
                   key={report.report_id}
                   className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
