@@ -36,7 +36,7 @@ export function DemoVideoSection() {
 
             <iframe
               className="w-full h-full"
-              src="https://www.youtube.com/embed/3WX7y5AB9eM"
+              src="https://www.youtube.com/embed/ymjd5Nyc5o8"
               title="CleanAI Demo"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen/>

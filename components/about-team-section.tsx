@@ -27,7 +27,7 @@ const teamMembers = [
     name: "Muhammad Saad Arshad",
     role: "Software Engineer - AI & Data Science",
     affiliation: "CS Student @ NUCES - FAST",
-    email: "saadarshad12123@gmail.com",
+    email: "saad.arshad12123@gmail.com",
     linkedin: "https://www.linkedin.com/in/muhammad-saad-arshad9503/",
     image: "/images/team/muhammad-saad-arshad.jpg",
   },
