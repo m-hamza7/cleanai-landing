@@ -239,6 +239,7 @@ export default function UserDashboardPage() {
       // Create FormData for report submission
       const formData = new FormData()
       formData.append('image', selectedImage)
+      formData.append('location', location)
       formData.append('latitude', latitude)
       formData.append('longitude', longitude)
       formData.append('gps_accuracy', '0')
@@ -638,6 +639,9 @@ export default function UserDashboardPage() {
                           )}
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
+                            {report.location || "Location not available"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             {report.latitude?.toFixed(4)}, {report.longitude?.toFixed(4)}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -699,6 +703,8 @@ export default function UserDashboardPage() {
 
                 <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                   <p className="text-sm"><strong>Submitted:</strong> {new Date(selectedReport.submitted_at || '').toLocaleString()}</p>
+                  <p className="text-sm"><strong>Location:</strong> {selectedReport.location || "Location not available"}</p>
+                  <p className="text-sm"><strong>Coordinates:</strong> {selectedReport.latitude?.toFixed(6)}, {selectedReport.longitude?.toFixed(6)}</p>
                   {selectedReport.status_updated_at && (
                     <p className="text-sm"><strong>Last Updated:</strong> {new Date(selectedReport.status_updated_at).toLocaleString()}</p>
                   )}

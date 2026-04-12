@@ -312,6 +312,10 @@ export function UserReportsPanel() {
 
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
+                          {report.location || "Location not available"}
+                        </p>
+
+                        <p className="text-xs text-muted-foreground">
                           {report.latitude?.toFixed(4)}, {report.longitude?.toFixed(4)}
                         </p>
 

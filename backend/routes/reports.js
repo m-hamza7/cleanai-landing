@@ -39,6 +39,10 @@ async function ensureReportWorkflowSchema() {
       await db.query('ALTER TABLE reports ADD COLUMN status_updated_at DATETIME NULL');
     }
 
+    if (!columnNames.has('location')) {
+      await db.query('ALTER TABLE reports ADD COLUMN location VARCHAR(512) NULL');
+    }
+
     await db.query(`
       ALTER TABLE reports
       MODIFY COLUMN status VARCHAR(256) NOT NULL DEFAULT 'pending'
@@ -143,7 +147,7 @@ async function classifyImage(imagePath) {
 // Create new report
 router.post('/', verifyToken, upload.single('image'), async (req, res) => {
   try {
-    const { latitude, longitude, gps_accuracy } = req.body;
+    const { latitude, longitude, gps_accuracy, location } = req.body;
     const user_id = req.user.user_id;
 
     // Validate input
@@ -152,12 +156,13 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
     }
 
     const image_url = `/uploads/reports/${req.file.filename}`;
+    const normalizedLocation = String(location || '').trim() || `${latitude}, ${longitude}`;
 
     // Insert report
     const [result] = await db.query(
-      `INSERT INTO reports (user_id, image_url, latitude, longitude, gps_accuracy, submitted_at, status, status_updated_at) 
-       VALUES (?, ?, ?, ?, ?, NOW(), 'pending', NOW())`,
-      [user_id, image_url, latitude, longitude, gps_accuracy || 0]
+      `INSERT INTO reports (user_id, image_url, location, latitude, longitude, gps_accuracy, submitted_at, status, status_updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), 'pending', NOW())`,
+      [user_id, image_url, normalizedLocation, latitude, longitude, gps_accuracy || 0]
     );
 
     const report_id = result.insertId;
@@ -210,7 +215,7 @@ router.get('/', verifyToken, async (req, res) => {
 
     let query = `
       SELECT 
-        r.report_id, r.user_id, r.image_url, r.latitude, r.longitude, 
+        r.report_id, r.user_id, r.image_url, r.location, r.latitude, r.longitude, 
         r.gps_accuracy, r.submitted_at, r.status, r.rejection_reason, r.pickup_scheduled_at, r.status_updated_at,
         u.name as user_name, u.email as user_email,
         ai.waste_type, ai.severity_level, ai.confidence_score,
