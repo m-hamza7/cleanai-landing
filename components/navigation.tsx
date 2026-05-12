@@ -3,8 +3,8 @@ import { Logo } from "@/components/logo"
 
 export function Navigation() {
   return (
-    <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto">
-      <div className="flex items-center space-x-8">
+    <nav className="flex flex-col gap-4 p-6 max-w-7xl mx-auto md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:space-x-8 md:gap-0">
         <Logo size="lg" />
         <div className="hidden md:flex items-center space-x-6 text-sm text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">
@@ -31,7 +31,7 @@ export function Navigation() {
 
         </div>
       </div>
-      <div className="flex items-center space-x-4">
+      <div className="flex flex-col items-center gap-2 w-full md:w-auto md:flex-row md:space-x-4 md:gap-0">
         <Button variant="outline" size="sm" asChild>
           <a href="/login">Citizen Login</a>
         </Button>
