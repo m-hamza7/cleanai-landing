@@ -73,3 +73,6 @@ export default function LiveMap({ markers = defaultMarkers }: { markers?: MapMar
 
 	return <div ref={containerRef} className="h-full w-full" />
 }
+
+
+/*daskdja*/
