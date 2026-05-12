@@ -173,8 +173,20 @@ export interface Report {
   confidence_score?: number;
   // From JOIN with cleanup_tasks table
   assigned_to?: number;
+  driver_user_id?: number;
+  driver_name?: string;
+  driver_phone?: string;
+  driver_area?: string;
   completion_status?: string;
   completed_at?: string;
+  completion_image_url?: string;
+  completion_latitude?: number;
+  completion_longitude?: number;
+  completion_location?: string;
+  completion_verified?: number;
+  pickup_report_status?: string;
+  pickup_report_action_at?: string;
+  pickup_report_action_by?: number;
   // Legacy / fallback fields
   location?: string;
   description?: string;
@@ -250,6 +262,7 @@ export const reportsAPI = {
     options?: {
       rejection_reason?: string;
       pickup_scheduled_at?: string;
+      driver_id?: number;
     }
   ): Promise<{ message: string; report: Report }> => {
     return fetchAPI(`/reports/${reportId}/status`, {
@@ -258,6 +271,7 @@ export const reportsAPI = {
         status,
         rejection_reason: options?.rejection_reason,
         pickup_scheduled_at: options?.pickup_scheduled_at,
+        driver_id: options?.driver_id,
       }),
     });
   },
@@ -266,6 +280,16 @@ export const reportsAPI = {
   delete: async (reportId: number): Promise<{ message: string }> => {
     return fetchAPI(`/reports/${reportId}`, {
       method: 'DELETE',
+    });
+  },
+
+  pickupReportAction: async (
+    reportId: number,
+    action: 'confirm' | 'reject'
+  ): Promise<{ message: string }> => {
+    return fetchAPI(`/reports/${reportId}/pickup-report`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
     });
   },
 };
@@ -278,6 +302,120 @@ export interface UserStats {
   resolvedReports: number;
   recentActivity: any[];
 }
+
+// ==================== Drivers APIs ====================
+
+export interface DriverProfile {
+  user_id: number;
+  name: string;
+  email?: string;
+  phone: string;
+  area: string;
+  role: string;
+  created_at?: string;
+  status?: number;
+}
+
+export interface DriverAssignment {
+  task_id: number;
+  report_id: number;
+  assigned_at?: string;
+  due_date?: string;
+  completion_status?: string;
+  completed_at?: string;
+  completion_image_url?: string;
+  completion_latitude?: number;
+  completion_longitude?: number;
+  completion_location?: string;
+  completion_verified?: number;
+  pickup_report_status?: string;
+  pickup_report_action_at?: string;
+  pickup_report_action_by?: number;
+  image_url?: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  status?: string;
+  submitted_at?: string;
+  waste_type?: string;
+  severity_level?: string;
+}
+
+export const driversAPI = {
+  register: async (payload: {
+    name: string;
+    email?: string;
+    phone: string;
+    area: string;
+    password: string;
+  }): Promise<{ message: string; driver_id: number }> => {
+    return fetchAPI('/drivers/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  login: async (payload: { phone: string; password: string }): Promise<AuthResponse> => {
+    const data = await fetchAPI<AuthResponse>('/drivers/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    if (data.token) {
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+
+    return data;
+  },
+
+  getAll: async (): Promise<DriverProfile[]> => {
+    const data = await fetchAPI<{ drivers: DriverProfile[] }>('/drivers');
+    return data.drivers || [];
+  },
+
+  getAssignments: async (): Promise<DriverAssignment[]> => {
+    const data = await fetchAPI<{ assignments: DriverAssignment[] }>('/drivers/assignments');
+    return data.assignments || [];
+  },
+
+  completeAssignment: async (
+    taskId: number,
+    payload: { latitude: string; longitude: string; location?: string },
+    image: File
+  ): Promise<{ message: string }> => {
+    const formData = new FormData();
+    formData.append('latitude', payload.latitude);
+    formData.append('longitude', payload.longitude);
+    if (payload.location) {
+      formData.append('location', payload.location);
+    }
+    formData.append('image', image);
+
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/drivers/assignments/${taskId}/complete`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    const rawBody = await response.text();
+    let data: any = null;
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      throw new Error(`Invalid JSON response from ${API_BASE_URL}/drivers/assignments/${taskId}/complete`);
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Failed to complete assignment');
+    }
+
+    return data;
+  },
+};
 
 export const usersAPI = {
   // Get all users (admin only)
@@ -335,6 +473,7 @@ export const api = {
   reports: reportsAPI,
   users: usersAPI,
   alerts: alertsAPI,
+  drivers: driversAPI,
   health: healthAPI,
 };
 

@@ -17,12 +17,14 @@ const authRoutes = require('./routes/auth');
 const reportRoutes = require('./routes/reports');
 const userRoutes = require('./routes/users');
 const alertRoutes = require('./routes/alerts');
+const driverRoutes = require('./routes/drivers');
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/drivers', driverRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -32,15 +32,17 @@ const STATUS_LABELS: Record<string, string> = {
   received: "Recieved",
   rejected: "Rejected",
   scheduled_for_pickup: "Scheduled for Pickup",
+  completed: "Completed",
 }
 
-type ReportFilter = "pending" | "received" | "rejected" | "scheduled_for_pickup"
+type ReportFilter = "pending" | "received" | "rejected" | "scheduled_for_pickup" | "completed"
 
 const FILTER_BUTTONS: Array<{ value: ReportFilter; label: string }> = [
   { value: "pending", label: "New" },
   { value: "received", label: "Received" },
   { value: "rejected", label: "Rejected" },
   { value: "scheduled_for_pickup", label: "Scheduled" },
+  { value: "completed", label: "Completed" },
 ]
 
 const pad2 = (value: number) => String(value).padStart(2, "0")
@@ -79,6 +81,19 @@ const formatReportDateTime = (value?: string | null) => {
   return parsed.toLocaleString()
 }
 
+const getPickupReportLabel = (status?: string | null) => {
+  switch ((status || "").toLowerCase()) {
+    case "waiting":
+      return "Waiting for user confirmation"
+    case "confirmed":
+      return "Confirmed by user"
+    case "rejected":
+      return "Rejected by user"
+    default:
+      return "Pending"
+  }
+}
+
 export function UserReportsPanel() {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
   const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/, "")
@@ -89,17 +104,30 @@ export function UserReportsPanel() {
   const [selectedStatuses, setSelectedStatuses] = useState<Record<number, string>>({})
   const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>({})
   const [scheduleDialogReport, setScheduleDialogReport] = useState<Report | null>(null)
+  const [pickupReportDialogReport, setPickupReportDialogReport] = useState<Report | null>(null)
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined)
   const [scheduleTime, setScheduleTime] = useState("09:00")
   const [activeFilter, setActiveFilter] = useState<ReportFilter>("pending")
+  const [drivers, setDrivers] = useState<Array<{ user_id: number; name: string; phone: string; area: string }>>([])
+  const [selectedDriverId, setSelectedDriverId] = useState<string>("")
 
   const filteredReports = reports.filter((report) => report.status === activeFilter)
 
   useEffect(() => {
     loadReports()
+    loadDrivers()
     const interval = setInterval(loadReports, 15000)
     return () => clearInterval(interval)
   }, [])
+
+  const loadDrivers = async () => {
+    try {
+      const data = await api.drivers.getAll()
+      setDrivers(data)
+    } catch (err) {
+      console.error("Failed to load drivers", err)
+    }
+  }
 
   const loadReports = async () => {
     try {
@@ -129,6 +157,8 @@ export function UserReportsPanel() {
         return "bg-red-500 text-white"
       case "scheduled_for_pickup":
         return "bg-emerald-600 text-white"
+      case "completed":
+        return "bg-green-700 text-white"
       default:
         return "bg-gray-500 text-white"
     }
@@ -175,12 +205,18 @@ export function UserReportsPanel() {
     tomorrow.setDate(tomorrow.getDate() + 1)
     setScheduleDate(tomorrow)
     setScheduleTime("09:00")
+    setSelectedDriverId("")
     setScheduleDialogReport(report)
   }
 
   const handleSchedulePickup = async () => {
     if (!scheduleDialogReport || !scheduleDate || !scheduleTime) {
       setError("Please choose both pickup date and pickup time")
+      return
+    }
+
+    if (!selectedDriverId) {
+      setError("Please select a driver for this pickup")
       return
     }
 
@@ -198,6 +234,7 @@ export function UserReportsPanel() {
       setError("")
       await api.reports.updateStatus(scheduleDialogReport.report_id, "scheduled_for_pickup", {
         pickup_scheduled_at: formatLocalDateTimeForApi(pickupDate),
+        driver_id: Number(selectedDriverId),
       })
       setScheduleDialogReport(null)
       await loadReports()
@@ -335,6 +372,29 @@ export function UserReportsPanel() {
                             <strong>Pickup:</strong> {formatReportDateTime(report.pickup_scheduled_at)}
                           </p>
                         )}
+
+                        {report.driver_name && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            <strong>Driver:</strong> {report.driver_name} ({report.driver_area || "Area N/A"})
+                          </p>
+                        )}
+
+                        {report.completion_status === "REASSIGNED" && (
+                          <p className="text-xs text-amber-700 dark:text-amber-400 pt-1">
+                            <strong>Task:</strong> Reassigned
+                          </p>
+                        )}
+
+                        {(report.completion_image_url || report.pickup_report_status) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPickupReportDialogReport(report)}
+                            className="mt-3"
+                          >
+                            View Pickup Report
+                          </Button>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2">
@@ -442,6 +502,28 @@ export function UserReportsPanel() {
               onChange={(e) => setScheduleTime(e.target.value)}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="pickup-driver">Select Driver</Label>
+            <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+              <SelectTrigger id="pickup-driver">
+                <SelectValue placeholder="Choose a driver" />
+              </SelectTrigger>
+              <SelectContent>
+                {drivers.length === 0 ? (
+                  <SelectItem value="no-drivers" disabled>
+                    No drivers registered
+                  </SelectItem>
+                ) : (
+                  drivers.map((driver) => (
+                    <SelectItem key={driver.user_id} value={driver.user_id.toString()}>
+                      {driver.name} • {driver.area} • {driver.phone}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DialogFooter>
@@ -449,11 +531,56 @@ export function UserReportsPanel() {
             <XCircle className="h-4 w-4 mr-1" />
             Cancel
           </Button>
-          <Button onClick={handleSchedulePickup} disabled={!scheduleDate || !scheduleTime || !!updatingReportId}>
+          <Button onClick={handleSchedulePickup} disabled={!scheduleDate || !scheduleTime || !selectedDriverId || !!updatingReportId}>
             <Truck className="h-4 w-4 mr-1" />
             Confirm Schedule
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={!!pickupReportDialogReport} onOpenChange={(open) => !open && setPickupReportDialogReport(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pickup Report</DialogTitle>
+          <DialogDescription>
+            Review driver pickup proof and user confirmation status.
+          </DialogDescription>
+        </DialogHeader>
+
+        {pickupReportDialogReport && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Report #{pickupReportDialogReport.report_id}</p>
+              <Badge variant="secondary">
+                {getPickupReportLabel(pickupReportDialogReport.pickup_report_status)}
+              </Badge>
+            </div>
+
+            {pickupReportDialogReport.completion_image_url && (
+              <img
+                src={`${backendBaseUrl}${pickupReportDialogReport.completion_image_url}`}
+                alt="Pickup proof"
+                className="w-full h-48 object-cover rounded-md border"
+              />
+            )}
+
+            <div className="text-sm text-muted-foreground space-y-1">
+              {pickupReportDialogReport.completed_at && (
+                <p><strong>Pickup Time:</strong> {formatReportDateTime(pickupReportDialogReport.completed_at)}</p>
+              )}
+              {pickupReportDialogReport.completion_location && (
+                <p><strong>Pickup Location:</strong> {pickupReportDialogReport.completion_location}</p>
+              )}
+              {pickupReportDialogReport.completion_latitude && pickupReportDialogReport.completion_longitude && (
+                <p><strong>Coordinates:</strong> {pickupReportDialogReport.completion_latitude.toFixed(6)}, {pickupReportDialogReport.completion_longitude.toFixed(6)}</p>
+              )}
+              {pickupReportDialogReport.driver_name && (
+                <p><strong>Driver:</strong> {pickupReportDialogReport.driver_name}</p>
+              )}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
     </>

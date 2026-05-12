@@ -35,6 +35,9 @@ export function Navigation() {
         <Button variant="outline" size="sm" asChild>
           <a href="/login">Citizen Login</a>
         </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a href="/driver-portal">Driver Portal</a>
+        </Button>
         <Button size="sm" asChild>
           <a href="/dashboard">Admin Dashboard</a>
         </Button>

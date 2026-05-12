@@ -68,6 +68,9 @@ export default function UserDashboardPage() {
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState("")
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [pickupReportDialogReport, setPickupReportDialogReport] = useState<Report | null>(null)
+  const [pickupActionLoading, setPickupActionLoading] = useState(false)
+  const [pickupActionError, setPickupActionError] = useState("")
   const [aiResult, setAiResult] = useState<{
     waste_type: string
     confidence: number
@@ -290,6 +293,42 @@ export default function UserDashboardPage() {
     router.push("/login")
   }
 
+  const getPickupReportLabel = (status?: string | null) => {
+    switch ((status || "").toLowerCase()) {
+      case "waiting":
+        return "Waiting for your confirmation"
+      case "confirmed":
+        return "Confirmed by you"
+      case "rejected":
+        return "Rejected by you"
+      default:
+        return "Pending"
+    }
+  }
+
+  const handlePickupReportAction = async (action: "confirm" | "reject") => {
+    if (!pickupReportDialogReport) return
+
+    try {
+      setPickupActionLoading(true)
+      setPickupActionError("")
+      await api.reports.pickupReportAction(pickupReportDialogReport.report_id, action)
+      await loadReports()
+      setSelectedReport((prev) =>
+        prev && prev.report_id === pickupReportDialogReport.report_id
+          ? { ...prev, pickup_report_status: action === "confirm" ? "confirmed" : "rejected" }
+          : prev
+      )
+      setPickupReportDialogReport((prev) =>
+        prev ? { ...prev, pickup_report_status: action === "confirm" ? "confirmed" : "rejected" } : prev
+      )
+    } catch (error: any) {
+      setPickupActionError(error.message || "Failed to update pickup report")
+    } finally {
+      setPickupActionLoading(false)
+    }
+  }
+
   const getStatusText = (status: string) => {
     switch (status) {
       case "pending":
@@ -300,6 +339,8 @@ export default function UserDashboardPage() {
         return "Rejected"
       case "scheduled_for_pickup":
         return "Scheduled for Pickup"
+      case "completed":
+        return "Completed"
       default:
         return status
     }
@@ -315,6 +356,8 @@ export default function UserDashboardPage() {
         return "bg-red-500 text-white"
       case "scheduled_for_pickup":
         return "bg-emerald-600 text-white"
+      case "completed":
+        return "bg-green-700 text-white"
       default:
         return ""
     }
@@ -720,12 +763,95 @@ export default function UserDashboardPage() {
                   )}
                 </div>
 
+                {(selectedReport.completion_image_url || selectedReport.pickup_report_status) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPickupReportDialogReport(selectedReport)}
+                  >
+                    View Pickup Report
+                  </Button>
+                )}
+
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <p>Pending: waiting for admin review.</p>
                   <p>Recieved: report has been acknowledged.</p>
                   <p>Scheduled for Pickup: cleanup team visit has been planned.</p>
                   <p>Rejected: report was reviewed and rejected with reason.</p>
+                  <p>Completed: driver submitted pickup report for confirmation.</p>
                 </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!pickupReportDialogReport} onOpenChange={(open) => !open && setPickupReportDialogReport(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Pickup Report</DialogTitle>
+              <DialogDescription>
+                Review the driver pickup proof and confirm or reject.
+              </DialogDescription>
+            </DialogHeader>
+
+            {pickupReportDialogReport && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Report #{pickupReportDialogReport.report_id}</p>
+                  <Badge variant="secondary">
+                    {getPickupReportLabel(pickupReportDialogReport.pickup_report_status)}
+                  </Badge>
+                </div>
+
+                {pickupReportDialogReport.completion_image_url && (
+                  <img
+                    src={`${backendBaseUrl}${pickupReportDialogReport.completion_image_url}`}
+                    alt="Pickup proof"
+                    className="w-full h-48 object-cover rounded-md border"
+                  />
+                )}
+
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  {pickupReportDialogReport.completed_at && (
+                    <p><strong>Pickup Time:</strong> {new Date(pickupReportDialogReport.completed_at).toLocaleString()}</p>
+                  )}
+                  {pickupReportDialogReport.completion_location && (
+                    <p><strong>Pickup Location:</strong> {pickupReportDialogReport.completion_location}</p>
+                  )}
+                  {pickupReportDialogReport.completion_latitude && pickupReportDialogReport.completion_longitude && (
+                    <p><strong>Coordinates:</strong> {pickupReportDialogReport.completion_latitude.toFixed(6)}, {pickupReportDialogReport.completion_longitude.toFixed(6)}</p>
+                  )}
+                  {pickupReportDialogReport.driver_name && (
+                    <p><strong>Driver:</strong> {pickupReportDialogReport.driver_name}</p>
+                  )}
+                </div>
+
+                {pickupActionError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{pickupActionError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {(!pickupReportDialogReport.pickup_report_status || pickupReportDialogReport.pickup_report_status === "waiting") && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handlePickupReportAction("confirm")}
+                      disabled={pickupActionLoading}
+                    >
+                      Confirm Pickup
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlePickupReportAction("reject")}
+                      disabled={pickupActionLoading}
+                    >
+                      Reject Pickup
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>

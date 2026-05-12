@@ -219,11 +219,16 @@ router.get('/', verifyToken, async (req, res) => {
         r.gps_accuracy, r.submitted_at, r.status, r.rejection_reason, r.pickup_scheduled_at, r.status_updated_at,
         u.name as user_name, u.email as user_email,
         ai.waste_type, ai.severity_level, ai.confidence_score,
-        ct.assigned_to, ct.completion_status, ct.completed_at
+        ct.assigned_to, ct.driver_user_id, ct.completion_status, ct.completed_at,
+        ct.completion_image_url, ct.completion_latitude, ct.completion_longitude,
+        ct.completion_location, ct.completion_verified, ct.pickup_report_status,
+        ct.pickup_report_action_at, ct.pickup_report_action_by,
+        d.name as driver_name, d.phone as driver_phone, d.area as driver_area
       FROM reports r
       LEFT JOIN user u ON r.user_id = u.user_id
       LEFT JOIN ai_classification ai ON r.report_id = ai.report_id
       LEFT JOIN cleanup_tasks ct ON r.report_id = ct.report_id
+      LEFT JOIN user d ON ct.driver_user_id = d.user_id
     `;
 
     const params = [];
@@ -266,11 +271,16 @@ router.get('/:id', verifyToken, async (req, res) => {
         r.*, 
         u.name as user_name, u.email as user_email,
         ai.waste_type, ai.severity_level, ai.confidence_score, ai.processed_at,
-        ct.assigned_to, ct.completion_status, ct.completed_at
+        ct.assigned_to, ct.driver_user_id, ct.completion_status, ct.completed_at,
+        ct.completion_image_url, ct.completion_latitude, ct.completion_longitude,
+        ct.completion_location, ct.completion_verified, ct.pickup_report_status,
+        ct.pickup_report_action_at, ct.pickup_report_action_by,
+        d.name as driver_name, d.phone as driver_phone, d.area as driver_area
       FROM reports r
       LEFT JOIN user u ON r.user_id = u.user_id
       LEFT JOIN ai_classification ai ON r.report_id = ai.report_id
       LEFT JOIN cleanup_tasks ct ON r.report_id = ct.report_id
+      LEFT JOIN user d ON ct.driver_user_id = d.user_id
       WHERE r.report_id = ?`,
       [report_id]
     );
@@ -295,9 +305,9 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
     }
 
     const report_id = req.params.id;
-    const { status, rejection_reason, pickup_scheduled_at } = req.body;
+    const { status, rejection_reason, pickup_scheduled_at, driver_id } = req.body;
 
-    const validStatuses = ['pending', 'received', 'rejected', 'scheduled_for_pickup'];
+    const validStatuses = ['pending', 'received', 'rejected', 'scheduled_for_pickup', 'completed'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
@@ -308,9 +318,15 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
 
     let normalizedPickupSchedule = null;
 
+    let selectedDriver = null;
+
     if (status === 'scheduled_for_pickup') {
       if (!pickup_scheduled_at) {
         return res.status(400).json({ error: 'pickup_scheduled_at is required for scheduled_for_pickup status' });
+      }
+
+      if (!driver_id) {
+        return res.status(400).json({ error: 'driver_id is required for scheduled_for_pickup status' });
       }
 
       normalizedPickupSchedule = toMySqlDateTime(pickup_scheduled_at);
@@ -326,6 +342,17 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       if (scheduledDate <= new Date()) {
         return res.status(400).json({ error: 'pickup_scheduled_at must be in the future' });
       }
+
+      const [drivers] = await db.query(
+        `SELECT user_id, name FROM user WHERE user_id = ? AND role = 'driver' AND status = 1`,
+        [driver_id]
+      );
+
+      if (drivers.length === 0) {
+        return res.status(404).json({ error: 'Selected driver not found' });
+      }
+
+      selectedDriver = drivers[0];
     }
 
     await db.query(
@@ -343,6 +370,41 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       ]
     );
 
+    if (status === 'scheduled_for_pickup') {
+      const [existingTasks] = await db.query(
+        'SELECT task_id FROM cleanup_tasks WHERE report_id = ? LIMIT 1',
+        [report_id]
+      );
+
+      if (existingTasks.length > 0) {
+        await db.query(
+          `UPDATE cleanup_tasks
+           SET driver_user_id = ?,
+               assigned_to = ?,
+               assigned_at = NOW(),
+               due_date = ?,
+               completion_status = 'TASK DUE',
+               completed_at = NULL,
+               completion_image_url = NULL,
+               completion_latitude = NULL,
+               completion_longitude = NULL,
+               completion_location = NULL,
+               completion_verified = 0,
+               pickup_report_status = NULL,
+               pickup_report_action_at = NULL,
+               pickup_report_action_by = NULL
+           WHERE report_id = ?`,
+          [driver_id, selectedDriver?.name || '', normalizedPickupSchedule, report_id]
+        );
+      } else {
+        await db.query(
+          `INSERT INTO cleanup_tasks (report_id, assigned_to, driver_user_id, assigned_at, due_date, completion_status)
+           VALUES (?, ?, ?, NOW(), ?, 'TASK DUE')`,
+          [report_id, selectedDriver?.name || '', driver_id, normalizedPickupSchedule]
+        );
+      }
+    }
+
     // Log action
     await db.query(
       `INSERT INTO system_logs (user_id, action_type, description, created_at) 
@@ -355,6 +417,97 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Update status error:', error);
     res.status(500).json({ error: 'Failed to update status', message: error.message });
+  }
+});
+
+// User confirmation for pickup report
+router.post('/:id/pickup-report', verifyToken, async (req, res) => {
+  try {
+    const report_id = req.params.id;
+    const { action } = req.body;
+
+    if (!['confirm', 'reject'].includes(String(action))) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    const [reports] = await db.query(
+      `SELECT r.report_id, r.user_id, ct.task_id, ct.pickup_report_status
+       FROM reports r
+       LEFT JOIN cleanup_tasks ct ON r.report_id = ct.report_id
+       WHERE r.report_id = ?`,
+      [report_id]
+    );
+
+    if (reports.length === 0) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    const report = reports[0];
+    if (req.user.user_id !== report.user_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (!report.task_id) {
+      return res.status(400).json({ error: 'No pickup report available' });
+    }
+
+    if (report.pickup_report_status && report.pickup_report_status !== 'waiting') {
+      return res.status(400).json({ error: 'Pickup report already processed' });
+    }
+
+    if (action === 'confirm') {
+      await db.query(
+        `UPDATE cleanup_tasks
+         SET pickup_report_status = 'confirmed',
+             pickup_report_action_at = NOW(),
+             pickup_report_action_by = ?
+         WHERE report_id = ?`,
+        [req.user.user_id, report_id]
+      );
+
+      await db.query(
+        `INSERT INTO system_logs (user_id, action_type, description, created_at)
+         VALUES (?, 'PICKUP_CONFIRM', 'User confirmed pickup report', NOW())`,
+        [req.user.user_id]
+      );
+
+      return res.json({ message: 'Pickup report confirmed' });
+    }
+
+    await db.query(
+      `UPDATE cleanup_tasks
+       SET pickup_report_status = 'rejected',
+           pickup_report_action_at = NOW(),
+           pickup_report_action_by = ?,
+           completion_status = 'REASSIGNED',
+           completion_verified = 0,
+           driver_user_id = NULL,
+           assigned_to = NULL,
+           assigned_at = NULL,
+           due_date = NULL
+       WHERE report_id = ?`,
+      [req.user.user_id, report_id]
+    );
+
+    await db.query(
+      `UPDATE reports
+       SET status = 'scheduled_for_pickup',
+           pickup_scheduled_at = NULL,
+           status_updated_at = NOW()
+       WHERE report_id = ?`,
+      [report_id]
+    );
+
+    await db.query(
+      `INSERT INTO system_logs (user_id, action_type, description, created_at)
+       VALUES (?, 'PICKUP_REJECT', 'User rejected pickup report', NOW())`,
+      [req.user.user_id]
+    );
+
+    res.json({ message: 'Pickup report rejected and reassigned' });
+  } catch (error) {
+    console.error('Pickup report action error:', error);
+    res.status(500).json({ error: 'Failed to process pickup report', message: error.message });
   }
 });
 
