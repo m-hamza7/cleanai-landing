@@ -25,7 +25,7 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
   return (
     <div className={`flex items-center ${className}`}>
       <Image
-        src="/logo2.jpg"
+        src="/logo2.png"
         alt="CleanAI Logo"
         width={dimensions[size].width}
         height={dimensions[size].height}
