@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [isReady, setIsReady] = useState(false)
   const [mapMarkers, setMapMarkers] = useState<
-    Array<{ id: string; lat: number; lng: number; title: string; description?: string }>
+    Array<{ id: string; lat: number; lng: number; title: string; description?: string; status?: string }>
   >([])
 
   useEffect(() => {
@@ -59,6 +59,7 @@ export default function DashboardPage() {
             lng: report.longitude as number,
             title: `Report #${report.report_id}`,
             description: report.location || report.waste_type || "Reported location",
+            status: report.status,
           }))
 
         setMapMarkers(markers)
@@ -96,6 +97,28 @@ export default function DashboardPage() {
                 </div>
                 <div className="h-96 rounded-lg overflow-hidden">
                   <LiveMap markers={mapMarkers.length ? mapMarkers : undefined} />
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "#f59e0b" }} />
+                    <span>Pending</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "#2563eb" }} />
+                    <span>Received</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "#0f766e" }} />
+                    <span>Scheduled</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "#16a34a" }} />
+                    <span>Completed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "#dc2626" }} />
+                    <span>Rejected</span>
+                  </div>
                 </div>
               </Card>
             </div>

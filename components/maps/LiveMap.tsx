@@ -9,6 +9,7 @@ type MapMarker = {
 	lng: number
 	title: string
 	description?: string
+	status?: string
 }
 
 const defaultMarkers: MapMarker[] = [
@@ -58,14 +59,30 @@ export default function LiveMap({ markers = defaultMarkers }: { markers?: MapMar
 		markersLayerRef.current.clearLayers()
 
 		markers.forEach((marker) => {
+			const status = (marker.status || "pending").toLowerCase()
+			const color =
+				status === "completed" ? "#16a34a" :
+				status === "scheduled_for_pickup" ? "#0f766e" :
+				status === "received" ? "#2563eb" :
+				status === "rejected" ? "#dc2626" :
+				"#f59e0b"
+
+			const icon = L.divIcon({
+				html: `<div style="background-color:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>`,
+				iconSize: [14, 14],
+				className: "",
+			})
+
 			const popupContent = `
 				<div>
 					<p style="font-weight:600;font-size:0.875rem;margin:0 0 4px 0;">${marker.title}</p>
-					${marker.description ? `<p style="font-size:0.75rem;color:#6b7280;margin:0;">${marker.description}</p>` : ""}
+					${marker.description ? `<p style=\"font-size:0.75rem;color:#6b7280;margin:0;\">${marker.description}</p>` : ""}
+					${marker.status ? `<p style=\"font-size:0.7rem;color:#6b7280;margin:4px 0 0 0;\">Status: ${marker.status}</p>` : ""}
 				</div>
 			`
 
 			L.marker([marker.lat, marker.lng])
+				.setIcon(icon)
 				.bindPopup(popupContent)
 				.addTo(markersLayerRef.current as L.LayerGroup)
 		})
@@ -73,6 +90,3 @@ export default function LiveMap({ markers = defaultMarkers }: { markers?: MapMar
 
 	return <div ref={containerRef} className="h-full w-full" />
 }
-
-
-/*daskdja*/
