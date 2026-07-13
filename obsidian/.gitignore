@@ -1,0 +1,7 @@
+# Obsidian local/cache (keep shared app settings committed)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspaces.json
+.obsidian/cache
+.obsidian/plugins/*/data.json
+.trash/

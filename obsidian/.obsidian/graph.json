@@ -1,0 +1,65 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:Project",
+      "color": {
+        "a": 1,
+        "rgb": 13
+      }
+    },
+    {
+      "query": "path:Architecture",
+      "color": {
+        "a": 1,
+        "rgb": 5439488
+      }
+    },
+    {
+      "query": "path:Stack",
+      "color": {
+        "a": 1,
+        "rgb": 16750848
+      }
+    },
+    {
+      "query": "path:Features",
+      "color": {
+        "a": 1,
+        "rgb": 16737894
+      }
+    },
+    {
+      "query": "path:API",
+      "color": {
+        "a": 1,
+        "rgb": 5439182
+      }
+    },
+    {
+      "query": "path:Setup",
+      "color": {
+        "a": 1,
+        "rgb": 10824234
+      }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": true,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": false,
+  "centerStrength": 0.5,
+  "repelStrength": 8,
+  "linkStrength": 0.8,
+  "linkDistance": 180,
+  "scale": 0.71740432066075,
+  "close": false
+}
