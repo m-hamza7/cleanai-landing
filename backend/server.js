@@ -6,8 +6,15 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// CORS – allow all origins in development; restrict to FRONTEND_URL in production
+const corsOptions = process.env.FRONTEND_URL
+  ? {
+      origin: [process.env.FRONTEND_URL, /\.vercel\.app$/],
+      credentials: true,
+    }
+  : {};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
@@ -26,7 +33,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/drivers', driverRoutes);
 
-// Health check endpoint
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -40,7 +47,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Error handler
+// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
@@ -57,16 +64,17 @@ async function startServer() {
     }
 
     app.listen(PORT, () => {
-      console.log(`\n🚀 CleanAI Backend Server running on http://localhost:${PORT}`);
+      console.log(`\n🚀 CleanAI Backend Server running on port ${PORT}`);
       console.log(`📊 API Endpoints:`);
-      console.log(`   - Health: http://localhost:${PORT}/api/health`);
-      console.log(`   - Auth: http://localhost:${PORT}/api/auth/*`);
-      console.log(`   - Reports: http://localhost:${PORT}/api/reports/*`);
-      console.log(`   - Users: http://localhost:${PORT}/api/users/*`);
-      console.log(`   - Alerts: http://localhost:${PORT}/api/alerts/*\n`);
+      console.log(`   Health:   /api/health`);
+      console.log(`   Auth:     /api/auth/*`);
+      console.log(`   Reports:  /api/reports/*`);
+      console.log(`   Users:    /api/users/*`);
+      console.log(`   Alerts:   /api/alerts/*`);
+      console.log(`   Drivers:  /api/drivers/*\n`);
     });
   } catch (error) {
-    console.error('❌ Failed to initialize report schema:', error.message);
+    console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
 }

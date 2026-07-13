@@ -11,7 +11,7 @@ router.get('/', verifyToken, async (req, res) => {
     }
 
     const [users] = await db.query(
-      'SELECT user_id, name, email, phone, role, created_at, status FROM user ORDER BY created_at DESC'
+      'SELECT user_id, name, email, phone, role, created_at, status FROM users ORDER BY created_at DESC'
     );
 
     res.json({ users });
@@ -27,7 +27,6 @@ router.get('/:id/stats', verifyToken, async (req, res) => {
   try {
     const user_id = req.params.id;
 
-    // Check permission
     if (req.user.role !== 'admin' && req.user.user_id != user_id) {
       return res.status(403).json({ error: 'Access denied' });
     }

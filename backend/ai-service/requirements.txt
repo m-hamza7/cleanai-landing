@@ -3,6 +3,7 @@
 flask==3.0.3
 flask-cors==4.0.1
 pillow==10.4.0
+gunicorn==22.0.0
 
 # Keep the stack CPU-only and compatible with Python 3.13 wheels.
 torch==2.6.0+cpu

@@ -31,15 +31,15 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const { user_id, report_id, alert_type, message, delivery_method } = req.body;
 
-    const [result] = await db.query(
+    const [rows] = await db.query(
       `INSERT INTO alerts (user_id, report_id, alert_type, message, delivery_method, triggered_at) 
-       VALUES (?, ?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, ?, NOW()) RETURNING alert_id`,
       [user_id, report_id, alert_type, message, delivery_method]
     );
 
     res.status(201).json({
       message: 'Alert created successfully',
-      alert_id: result.insertId
+      alert_id: rows[0].alert_id
     });
 
   } catch (error) {

@@ -9,14 +9,12 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, phone, password, role = 'citizen' } = req.body;
 
-    // Validate input
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    // Check if user already exists
     const [existingUsers] = await db.query(
-      'SELECT * FROM user WHERE email = ?',
+      'SELECT * FROM users WHERE email = ?',
       [email]
     );
 
@@ -24,19 +22,17 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
-    // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Insert new user
-    const [result] = await db.query(
-      `INSERT INTO user (name, email, phone, password_hash, role, created_at, status) 
-       VALUES (?, ?, ?, ?, ?, NOW(), 1)`,
-      [name, email, phone, password_hash, role]
+    const [rows] = await db.query(
+      `INSERT INTO users (name, email, phone, password_hash, role, created_at, status) 
+       VALUES (?, ?, ?, ?, ?, NOW(), TRUE) RETURNING user_id`,
+      [name, email, phone || '', password_hash, role]
     );
 
     res.status(201).json({
       message: 'User registered successfully',
-      user_id: result.insertId
+      user_id: rows[0].user_id
     });
 
   } catch (error) {
@@ -50,14 +46,12 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user
     const [users] = await db.query(
-      'SELECT * FROM user WHERE email = ? AND status = 1',
+      'SELECT * FROM users WHERE email = ? AND status = TRUE',
       [email]
     );
 
@@ -67,14 +61,12 @@ router.post('/login', async (req, res) => {
 
     const user = users[0];
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { 
         user_id: user.user_id, 
@@ -85,7 +77,6 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Log the login action
     await db.query(
       `INSERT INTO system_logs (user_id, action_type, description, created_at) 
        VALUES (?, 'LOGIN', 'User logged in', NOW())`,
@@ -126,11 +117,11 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// Get current user (protected route)
+// Get current user (protected)
 router.get('/me', verifyToken, async (req, res) => {
   try {
     const [users] = await db.query(
-      'SELECT user_id, name, email, phone, role, created_at FROM user WHERE user_id = ?',
+      'SELECT user_id, name, email, phone, role, created_at FROM users WHERE user_id = ?',
       [req.user.user_id]
     );
 

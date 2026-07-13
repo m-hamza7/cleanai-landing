@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Minimal runtime libs for scientific/python wheels.
+# Minimal runtime libs for scientific/python wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
@@ -14,9 +14,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY classify.py ./
 
-# Model is expected at /app/best.pt by default.
 ENV MODEL_PATH=/app/best.pt
 ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "classify.py"]
+# Use shell form so $PORT (injected by Render) is expanded at runtime.
+# Falls back to 5001 for local/Docker Compose usage.
+CMD gunicorn --workers=2 --threads=4 --bind=0.0.0.0:${PORT:-5001} --timeout=120 classify:app

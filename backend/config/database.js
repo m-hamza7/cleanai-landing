@@ -1,34 +1,57 @@
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-// Create MySQL connection pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'cleanai_db',
-  port: process.env.DB_PORT || 3306,
-  dateStrings: true,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Supabase requires SSL; skip certificate verification for self-signed certs
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
-// Promisify pool for async/await
-const promisePool = pool.promise();
+pool.on('connect', () => {
+  console.log('✅ Database connected successfully');
+});
 
-// Test database connection
-const testConnection = async () => {
-  try {
-    const connection = await promisePool.getConnection();
-    console.log('✅ Database connected successfully');
-    connection.release();
-  } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    console.error('⚠️  Make sure XAMPP MySQL is running and credentials are correct in .env file');
-  }
+pool.on('error', (err) => {
+  console.error('❌ Database pool error:', err.message);
+});
+
+// Verify connection on startup
+pool.query('SELECT 1').then(() => {
+  console.log('✅ Database ping successful');
+}).catch((err) => {
+  console.error('❌ Database connection failed:', err.message);
+  console.error('⚠️  Make sure DATABASE_URL is set correctly in .env');
+});
+
+// ── Compatibility shim ──────────────────────────────────────────
+// Mimics the mysql2 promise-pool API so existing route code works unchanged:
+//   • Converts ? placeholders → $1, $2, … (PostgreSQL positional params)
+//   • Returns [rows, fields] so `const [rows] = await db.query(…)` still works
+// ───────────────────────────────────────────────────────────────
+const db = {
+  query: async (sql, params = []) => {
+    let idx = 0;
+    const pgSql = sql.replace(/\?/g, () => `$${++idx}`);
+    const result = await pool.query(pgSql, params);
+    return [result.rows, result.fields ?? []];
+  },
+
+  // Expose a connection handle for code that calls getConnection()
+  getConnection: async () => {
+    const client = await pool.connect();
+    return {
+      query: async (sql, params = []) => {
+        let idx = 0;
+        const pgSql = sql.replace(/\?/g, () => `$${++idx}`);
+        const result = await client.query(pgSql, params);
+        return [result.rows, result.fields ?? []];
+      },
+      release: () => client.release(),
+    };
+  },
 };
 
-testConnection();
-
-module.exports = promisePool;
+module.exports = db;

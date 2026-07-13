@@ -1,0 +1,65 @@
+# ============================================================
+# Render Deployment Configuration
+# https://render.com/docs/yaml-spec
+#
+# Services:
+#   1. cleanai-backend   – Express/Node.js API  (port auto-assigned by Render)
+#   2. cleanai-ai        – Flask/YOLOv8 Docker  (port auto-assigned by Render)
+#
+# After deploying, set the following environment variables in the
+# Render dashboard for each service (marked sync: false below):
+#
+#  cleanai-backend:
+#    DATABASE_URL  – Supabase "Transaction" connection string
+#                   (Settings → Database → Connection string → URI)
+#    JWT_SECRET    – any long random string, e.g. `openssl rand -hex 32`
+#    AI_SERVICE_URL – public URL of the cleanai-ai service once deployed
+#    FRONTEND_URL  – your Vercel / frontend URL (for CORS)
+#
+#  cleanai-ai:
+#    MODEL_URL  – direct download URL for best.pt
+#               (GitHub raw URL already hard-coded as fallback)
+# ============================================================
+
+services:
+  # ----------------------------------------------------------
+  # 1. Express Backend (Node.js)
+  # ----------------------------------------------------------
+  - type: web
+    name: cleanai-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install --production
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false          # Set in Render dashboard
+      - key: JWT_SECRET
+        sync: false          # Set in Render dashboard
+      - key: AI_SERVICE_URL
+        sync: false          # Set after cleanai-ai is deployed
+      - key: FRONTEND_URL
+        sync: false          # Set to your Vercel URL (optional)
+
+  # ----------------------------------------------------------
+  # 2. Flask AI Microservice (native Python)
+  # ----------------------------------------------------------
+  - type: web
+    name: cleanai-ai
+    runtime: python
+    rootDir: backend/ai-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers=2 --threads=4 --bind=0.0.0.0:$PORT --timeout=120 classify:app
+    plan: free
+    envVars:
+      - key: MODEL_PATH
+        value: /opt/render/project/src/best.pt
+      - key: MODEL_URL
+        sync: false          # Set to your GitHub release URL
+      - key: YOLO_CONFIG_DIR
+        value: /tmp/Ultralytics
+      - key: PYTHONUNBUFFERED
+        value: "1"

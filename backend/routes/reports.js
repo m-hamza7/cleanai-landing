@@ -8,15 +8,13 @@ const FormData = require('form-data');
 const db = require('../config/database');
 const { verifyToken } = require('./auth');
 
-// AI Classification Service URL
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5001';
 let reportSchemaEnsured = false;
 let reportSchemaEnsuringPromise = null;
 
+// Ensure any columns added after initial schema creation exist (PostgreSQL version)
 async function ensureReportWorkflowSchema() {
-  if (reportSchemaEnsured) {
-    return;
-  }
+  if (reportSchemaEnsured) return;
 
   if (reportSchemaEnsuringPromise) {
     await reportSchemaEnsuringPromise;
@@ -24,29 +22,25 @@ async function ensureReportWorkflowSchema() {
   }
 
   reportSchemaEnsuringPromise = (async () => {
-    const [columns] = await db.query('SHOW COLUMNS FROM reports');
-    const columnNames = new Set(columns.map((column) => column.Field));
+    const [columns] = await db.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'reports'`
+    );
+    const columnNames = new Set(columns.map((col) => col.column_name));
 
     if (!columnNames.has('rejection_reason')) {
-      await db.query('ALTER TABLE reports ADD COLUMN rejection_reason TEXT NULL');
+      await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS rejection_reason TEXT');
     }
-
     if (!columnNames.has('pickup_scheduled_at')) {
-      await db.query('ALTER TABLE reports ADD COLUMN pickup_scheduled_at DATETIME NULL');
+      await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS pickup_scheduled_at TIMESTAMP');
     }
-
     if (!columnNames.has('status_updated_at')) {
-      await db.query('ALTER TABLE reports ADD COLUMN status_updated_at DATETIME NULL');
+      await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMP');
     }
-
     if (!columnNames.has('location')) {
-      await db.query('ALTER TABLE reports ADD COLUMN location VARCHAR(512) NULL');
+      await db.query('ALTER TABLE reports ADD COLUMN IF NOT EXISTS location VARCHAR(512)');
     }
-
-    await db.query(`
-      ALTER TABLE reports
-      MODIFY COLUMN status VARCHAR(256) NOT NULL DEFAULT 'pending'
-    `);
 
     reportSchemaEnsured = true;
   })();
@@ -58,26 +52,22 @@ async function ensureReportWorkflowSchema() {
   }
 }
 
-function toMySqlDateTime(input) {
-  if (input === null || input === undefined) {
-    return null;
-  }
+// Normalise any datetime string to "YYYY-MM-DD HH:MM:SS" (also accepted by PostgreSQL)
+function toDateTimeString(input) {
+  if (input === null || input === undefined) return null;
 
   const value = String(input).trim();
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   const sqlDateTimePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/;
-  const normalizedInput = sqlDateTimePattern.test(value) && value.length === 16 ? `${value}:00` : value;
+  const normalizedInput =
+    sqlDateTimePattern.test(value) && value.length === 16 ? `${value}:00` : value;
   const parseValue = sqlDateTimePattern.test(normalizedInput)
     ? normalizedInput.replace(' ', 'T')
     : normalizedInput;
 
   const parsed = new Date(parseValue);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
+  if (Number.isNaN(parsed.getTime())) return null;
 
   const pad2 = (n) => String(n).padStart(2, '0');
   return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())} ${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}:${pad2(parsed.getSeconds())}`;
@@ -93,24 +83,20 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   }
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
+    if (mimetype && extname) return cb(null, true);
+    cb(new Error('Only image files are allowed'));
   }
 });
 
@@ -140,7 +126,7 @@ async function classifyImage(imagePath) {
   } catch (error) {
     const errMsg = error.response?.data?.error || error.message;
     console.error('⚠️  AI classification failed:', errMsg);
-    return null; // non-blocking — report is still saved
+    return null;
   }
 }
 
@@ -150,7 +136,6 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
     const { latitude, longitude, gps_accuracy, location } = req.body;
     const user_id = req.user.user_id;
 
-    // Validate input
     if (!req.file || !latitude || !longitude) {
       return res.status(400).json({ error: 'Image, latitude, and longitude are required' });
     }
@@ -158,18 +143,17 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
     const image_url = `/uploads/reports/${req.file.filename}`;
     const normalizedLocation = String(location || '').trim() || `${latitude}, ${longitude}`;
 
-    // Insert report
-    const [result] = await db.query(
+    const [reportRows] = await db.query(
       `INSERT INTO reports (user_id, image_url, location, latitude, longitude, gps_accuracy, submitted_at, status, status_updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), 'pending', NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), 'pending', NOW()) RETURNING report_id`,
       [user_id, image_url, normalizedLocation, latitude, longitude, gps_accuracy || 0]
     );
 
-    const report_id = result.insertId;
+    const report_id = reportRows[0].report_id;
 
-    // ── AI Classification (non-blocking for the response) ──────
+    // AI Classification (non-blocking for the response)
     let aiResult = null;
-    const imageDiskPath = `.${image_url}`; // e.g. ./uploads/reports/xxx.jpg
+    const imageDiskPath = `.${image_url}`;
     aiResult = await classifyImage(imageDiskPath);
 
     if (aiResult && aiResult.waste_type && aiResult.waste_type !== 'Unknown') {
@@ -181,7 +165,6 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
       console.log(`📝 AI classification saved for report #${report_id}`);
     }
 
-    // Log action
     await db.query(
       `INSERT INTO system_logs (user_id, action_type, description, created_at) 
        VALUES (?, 'REPORT_SUBMIT', 'New waste report submitted', NOW())`,
@@ -225,21 +208,19 @@ router.get('/', verifyToken, async (req, res) => {
         ct.pickup_report_action_at, ct.pickup_report_action_by,
         d.name as driver_name, d.phone as driver_phone, d.area as driver_area
       FROM reports r
-      LEFT JOIN user u ON r.user_id = u.user_id
+      LEFT JOIN users u ON r.user_id = u.user_id
       LEFT JOIN ai_classification ai ON r.report_id = ai.report_id
       LEFT JOIN cleanup_tasks ct ON r.report_id = ct.report_id
-      LEFT JOIN user d ON ct.driver_user_id = d.user_id
+      LEFT JOIN users d ON ct.driver_user_id = d.user_id
     `;
 
     const params = [];
 
-    // Filter by user if not admin
     if (role !== 'admin') {
       query += ' WHERE r.user_id = ?';
       params.push(user_id);
     }
 
-    // Filter by status if provided
     if (status) {
       query += role === 'admin' ? ' WHERE r.status = ?' : ' AND r.status = ?';
       params.push(status);
@@ -250,10 +231,7 @@ router.get('/', verifyToken, async (req, res) => {
 
     const [reports] = await db.query(query, params);
 
-    res.json({
-      reports,
-      count: reports.length
-    });
+    res.json({ reports, count: reports.length });
 
   } catch (error) {
     console.error('Get reports error:', error);
@@ -277,10 +255,10 @@ router.get('/:id', verifyToken, async (req, res) => {
         ct.pickup_report_action_at, ct.pickup_report_action_by,
         d.name as driver_name, d.phone as driver_phone, d.area as driver_area
       FROM reports r
-      LEFT JOIN user u ON r.user_id = u.user_id
+      LEFT JOIN users u ON r.user_id = u.user_id
       LEFT JOIN ai_classification ai ON r.report_id = ai.report_id
       LEFT JOIN cleanup_tasks ct ON r.report_id = ct.report_id
-      LEFT JOIN user d ON ct.driver_user_id = d.user_id
+      LEFT JOIN users d ON ct.driver_user_id = d.user_id
       WHERE r.report_id = ?`,
       [report_id]
     );
@@ -317,19 +295,17 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
     }
 
     let normalizedPickupSchedule = null;
-
     let selectedDriver = null;
 
     if (status === 'scheduled_for_pickup') {
       if (!pickup_scheduled_at) {
         return res.status(400).json({ error: 'pickup_scheduled_at is required for scheduled_for_pickup status' });
       }
-
       if (!driver_id) {
         return res.status(400).json({ error: 'driver_id is required for scheduled_for_pickup status' });
       }
 
-      normalizedPickupSchedule = toMySqlDateTime(pickup_scheduled_at);
+      normalizedPickupSchedule = toDateTimeString(pickup_scheduled_at);
       if (!normalizedPickupSchedule) {
         return res.status(400).json({ error: 'pickup_scheduled_at must be a valid datetime' });
       }
@@ -344,7 +320,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       }
 
       const [drivers] = await db.query(
-        `SELECT user_id, name FROM user WHERE user_id = ? AND role = 'driver' AND status = 1`,
+        `SELECT user_id, name FROM users WHERE user_id = ? AND role = 'driver' AND status = TRUE`,
         [driver_id]
       );
 
@@ -389,7 +365,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
                completion_latitude = NULL,
                completion_longitude = NULL,
                completion_location = NULL,
-               completion_verified = 0,
+               completion_verified = FALSE,
                pickup_report_status = NULL,
                pickup_report_action_at = NULL,
                pickup_report_action_by = NULL
@@ -405,7 +381,6 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
       }
     }
 
-    // Log action
     await db.query(
       `INSERT INTO system_logs (user_id, action_type, description, created_at) 
        VALUES (?, 'STATUS_UPDATE', 'Report status updated to ${status}', NOW())`,
@@ -480,7 +455,7 @@ router.post('/:id/pickup-report', verifyToken, async (req, res) => {
            pickup_report_action_at = NOW(),
            pickup_report_action_by = ?,
            completion_status = 'REASSIGNED',
-           completion_verified = 0,
+           completion_verified = FALSE,
            driver_user_id = NULL,
            assigned_to = NULL,
            assigned_at = NULL,
@@ -517,15 +492,15 @@ router.post('/:id/classify', verifyToken, async (req, res) => {
     const report_id = req.params.id;
     const { waste_type, severity_level, confidence_score } = req.body;
 
-    const [result] = await db.query(
+    const [rows] = await db.query(
       `INSERT INTO ai_classification (report_id, waste_type, severity_level, confidence_score, processed_at) 
-       VALUES (?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, NOW()) RETURNING classification_id`,
       [report_id, waste_type, severity_level, confidence_score || 0]
     );
 
     res.status(201).json({
       message: 'AI classification added successfully',
-      classification_id: result.insertId
+      classification_id: rows[0].classification_id
     });
 
   } catch (error) {
@@ -543,9 +518,8 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     const report_id = req.params.id;
 
-    // Get image URL to delete file
     const [reports] = await db.query('SELECT image_url FROM reports WHERE report_id = ?', [report_id]);
-    
+
     if (reports.length > 0) {
       const imagePath = `.${reports[0].image_url}`;
       if (fs.existsSync(imagePath)) {
@@ -553,7 +527,6 @@ router.delete('/:id', verifyToken, async (req, res) => {
       }
     }
 
-    // Delete report (cascading deletes will handle related records)
     await db.query('DELETE FROM reports WHERE report_id = ?', [report_id]);
 
     res.json({ message: 'Report deleted successfully' });

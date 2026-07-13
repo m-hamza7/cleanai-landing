@@ -41,10 +41,7 @@ const completionUpload = multer({
     const allowedTypes = /jpeg|jpg|png|gif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
+    if (mimetype && extname) return cb(null, true);
     cb(new Error('Only image files are allowed'));
   },
 });
@@ -77,8 +74,8 @@ router.post('/register', async (req, res) => {
     }
 
     const [existingDrivers] = await db.query(
-      'SELECT user_id FROM user WHERE phone = ? AND role = ? LIMIT 1',
-      [phone, 'driver']
+      `SELECT user_id FROM users WHERE phone = ? AND role = 'driver' LIMIT 1`,
+      [phone]
     );
 
     if (existingDrivers.length > 0) {
@@ -87,15 +84,15 @@ router.post('/register', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const [result] = await db.query(
-      `INSERT INTO user (name, email, phone, password_hash, role, area, created_at, status)
-       VALUES (?, ?, ?, ?, 'driver', ?, NOW(), 1)`,
+    const [rows] = await db.query(
+      `INSERT INTO users (name, email, phone, password_hash, role, area, created_at, status)
+       VALUES (?, ?, ?, ?, 'driver', ?, NOW(), TRUE) RETURNING user_id`,
       [name, email || '', phone, passwordHash, area]
     );
 
     res.status(201).json({
       message: 'Driver registered successfully',
-      driver_id: result.insertId,
+      driver_id: rows[0].user_id,
     });
   } catch (error) {
     console.error('Driver register error:', error);
@@ -113,8 +110,8 @@ router.post('/login', async (req, res) => {
     }
 
     const [drivers] = await db.query(
-      'SELECT * FROM user WHERE phone = ? AND role = ? AND status = 1',
-      [phone, 'driver']
+      `SELECT * FROM users WHERE phone = ? AND role = 'driver' AND status = TRUE`,
+      [phone]
     );
 
     if (drivers.length === 0) {
@@ -165,7 +162,7 @@ router.get('/', verifyToken, async (req, res) => {
 
     const [drivers] = await db.query(
       `SELECT user_id, name, email, phone, area, role, created_at, status
-       FROM user
+       FROM users
        WHERE role = 'driver'
        ORDER BY created_at DESC`
     );
@@ -265,7 +262,7 @@ router.post('/assignments/:taskId/complete', verifyToken, completionUpload.singl
     const completionLat = Number(latitude);
     const completionLon = Number(longitude);
 
-    if ([reportLat, reportLon, completionLat, completionLon].some((value) => Number.isNaN(value))) {
+    if ([reportLat, reportLon, completionLat, completionLon].some((v) => Number.isNaN(v))) {
       return res.status(400).json({ error: 'Invalid latitude or longitude values' });
     }
 
@@ -289,7 +286,7 @@ router.post('/assignments/:taskId/complete', verifyToken, completionUpload.singl
            completion_latitude = ?,
            completion_longitude = ?,
            completion_location = ?,
-           completion_verified = 1,
+           completion_verified = TRUE,
            pickup_report_status = 'waiting',
            pickup_report_action_at = NULL,
            pickup_report_action_by = NULL
