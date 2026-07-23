@@ -26,6 +26,7 @@ tags:
 | `AI_SERVICE_URL` | No | Default `http://localhost:5001` |
 | `FRONTEND_URL` | Prod | CORS allowlist (Vercel URL) |
 | `NODE_ENV` | Prod | `production` on Render |
+| `OSRM_BASE_URL` | No | OSRM server for driver routing (default `https://router.project-osrm.org`) |
 
 Older MySQL-style keys (`DB_HOST`, `DB_USER`, …) may appear in historical docs — current code uses **`DATABASE_URL`**.
 

@@ -24,8 +24,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Camera, CheckCircle2, Eye, EyeOff, AlertCircle, MapPin, Navigation, Truck, LogOut } from "lucide-react"
-import { api, type DriverAssignment } from "@/lib/api-client"
+import dynamic from "next/dynamic"
+import { Camera, CheckCircle2, Eye, EyeOff, AlertCircle, MapPin, Navigation, Truck, LogOut, Route, Play, Flag } from "lucide-react"
+import { api, type DriverAssignment, type DriverRoute } from "@/lib/api-client"
+
+const RouteMap = dynamic(() => import("@/components/maps/RouteMap"), { ssr: false })
+
+function formatRouteDistance(meters?: number) {
+  if (meters == null || Number.isNaN(meters)) return "—"
+  if (meters < 1000) return `${Math.round(meters)} m`
+  return `${(meters / 1000).toFixed(1)} km`
+}
+
+function formatRouteDuration(seconds?: number) {
+  if (seconds == null || Number.isNaN(seconds)) return "—"
+  const mins = Math.round(seconds / 60)
+  if (mins < 60) return `${mins} min`
+  const hours = Math.floor(mins / 60)
+  const rem = mins % 60
+  return rem ? `${hours}h ${rem}m` : `${hours}h`
+}
+
+function getCurrentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by this browser"))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0,
+    })
+  })
+}
 
 const DRIVER_AREAS = [
   "Scheme33",
@@ -75,6 +107,14 @@ export default function DriverPortalPage() {
   const [completionLoading, setCompletionLoading] = useState(false)
   const [locationLoading, setLocationLoading] = useState(false)
 
+  const [myRoutes, setMyRoutes] = useState<DriverRoute[]>([])
+  const [selectedRoute, setSelectedRoute] = useState<DriverRoute | null>(null)
+  const [routeDialogOpen, setRouteDialogOpen] = useState(false)
+  const [routeError, setRouteError] = useState("")
+  const [routeLoadingTaskId, setRouteLoadingTaskId] = useState<number | null>(null)
+  const [multiRouteLoading, setMultiRouteLoading] = useState(false)
+  const [tripActionLoading, setTripActionLoading] = useState(false)
+
   useEffect(() => {
     const storedUser = api.auth.getStoredUser()
     if (storedUser?.role === "driver") {
@@ -85,6 +125,7 @@ export default function DriverPortalPage() {
   useEffect(() => {
     if (driverUser) {
       loadAssignments()
+      loadMyRoutes()
     }
   }, [driverUser])
 
@@ -130,6 +171,125 @@ export default function DriverPortalPage() {
       setAssignmentsLoading(false)
     }
   }
+
+  const loadMyRoutes = async () => {
+    try {
+      const routes = await api.drivers.getMyRoutes()
+      setMyRoutes(routes)
+    } catch {
+      // Non-fatal: route list is secondary to assignments
+    }
+  }
+
+  const latestRouteForTask = (taskId: number) => {
+    return myRoutes.find(
+      (route) =>
+        route.route_type === "single" &&
+        Array.isArray(route.task_ids) &&
+        route.task_ids.includes(taskId) &&
+        (route.status === "planned" || route.status === "started")
+    )
+  }
+
+  const latestMultiRoute = useMemo(() => {
+    return myRoutes.find(
+      (route) => route.route_type === "multi" && (route.status === "planned" || route.status === "started")
+    ) || null
+  }, [myRoutes])
+
+  const openRouteView = (route: DriverRoute) => {
+    setSelectedRoute(route)
+    setRouteDialogOpen(true)
+    setRouteError("")
+  }
+
+  const handlePlanSingleRoute = async (assignment: DriverAssignment) => {
+    setRouteError("")
+    setRouteLoadingTaskId(assignment.task_id)
+    try {
+      const position = await getCurrentPosition()
+      const route = await api.drivers.planSingleRoute({
+        task_id: assignment.task_id,
+        origin_lat: position.coords.latitude,
+        origin_lng: position.coords.longitude,
+      })
+      setMyRoutes((prev) => [route, ...prev])
+      openRouteView(route)
+    } catch (error: any) {
+      setRouteError(error.message || "Failed to plan route. Allow location access and try again.")
+    } finally {
+      setRouteLoadingTaskId(null)
+    }
+  }
+
+  const handlePlanMultiRoute = async () => {
+    if (activeAssignments.length === 0) return
+    setRouteError("")
+    setMultiRouteLoading(true)
+    try {
+      const position = await getCurrentPosition()
+      const route = await api.drivers.planMultiRoute({
+        origin_lat: position.coords.latitude,
+        origin_lng: position.coords.longitude,
+        task_ids: activeAssignments.map((a) => a.task_id),
+      })
+      setMyRoutes((prev) => [route, ...prev])
+      openRouteView(route)
+    } catch (error: any) {
+      setRouteError(error.message || "Failed to optimize all pickups.")
+    } finally {
+      setMultiRouteLoading(false)
+    }
+  }
+
+  const handleStartTrip = async (route: DriverRoute) => {
+    setTripActionLoading(true)
+    setRouteError("")
+    try {
+      const updated = await api.drivers.startRoute(route.route_id)
+      setMyRoutes((prev) => prev.map((r) => (r.route_id === updated.route_id ? updated : r)))
+      setSelectedRoute(updated)
+    } catch (error: any) {
+      setRouteError(error.message || "Failed to start trip")
+    } finally {
+      setTripActionLoading(false)
+    }
+  }
+
+  const handleCompleteTrip = async (route: DriverRoute) => {
+    setTripActionLoading(true)
+    setRouteError("")
+    try {
+      const updated = await api.drivers.completeRoute(route.route_id)
+      setMyRoutes((prev) => prev.map((r) => (r.route_id === updated.route_id ? updated : r)))
+      setSelectedRoute(updated)
+    } catch (error: any) {
+      setRouteError(error.message || "Failed to complete trip")
+    } finally {
+      setTripActionLoading(false)
+    }
+  }
+
+  const routeMapStops = useMemo(() => {
+    if (!selectedRoute) return []
+    const stops = [
+      {
+        id: "origin",
+        lat: selectedRoute.origin_lat,
+        lng: selectedRoute.origin_lng,
+        label: "Start",
+        kind: "origin" as const,
+      },
+      ...((selectedRoute.ordered_stops || []).map((stop) => ({
+        id: `stop-${stop.task_id}`,
+        lat: stop.lat,
+        lng: stop.lng,
+        label: String(stop.order),
+        kind: "pickup" as const,
+      }))),
+    ]
+    return stops
+  }, [selectedRoute])
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -529,13 +689,43 @@ export default function DriverPortalPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Active Assignments
-            </CardTitle>
-            <CardDescription>Pickup tasks assigned to you by admins</CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Active Assignments
+                </CardTitle>
+                <CardDescription>Pickup tasks assigned to you by admins</CardDescription>
+              </div>
+              {activeAssignments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handlePlanMultiRoute}
+                    disabled={multiRouteLoading}
+                  >
+                    <Route className={`h-4 w-4 mr-1 ${multiRouteLoading ? "animate-pulse" : ""}`} />
+                    {multiRouteLoading ? "Optimizing..." : "Optimize all pickups"}
+                  </Button>
+                  {latestMultiRoute && (
+                    <Button variant="outline" size="sm" onClick={() => openRouteView(latestMultiRoute)}>
+                      <Navigation className="h-4 w-4 mr-1" />
+                      View multi route
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
+            {routeError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{routeError}</AlertDescription>
+              </Alert>
+            )}
+
             {assignmentsError && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -553,56 +743,83 @@ export default function DriverPortalPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeAssignments.map((assignment) => (
-                  <div key={assignment.task_id} className="border rounded-lg p-4 bg-card/50">
-                    <div className="flex flex-col md:flex-row md:items-start gap-4">
-                      <div className="w-full md:w-32">
-                        {assignment.image_url ? (
-                          <img
-                            src={`${backendBaseUrl}${assignment.image_url}`}
-                            alt="Report"
-                            className="w-full h-24 object-cover rounded-md border"
-                          />
-                        ) : (
-                          <div className="w-full h-24 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                            No image
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold">Report #{assignment.report_id}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {assignment.waste_type || "Pending AI"}
-                            </p>
-                          </div>
-                          <Badge variant="secondary">
-                            {assignment.completion_status || (assignment.completed_at ? "COMPLETED" : "TASK DUE")}
-                          </Badge>
+                {activeAssignments.map((assignment) => {
+                  const taskRoute = latestRouteForTask(assignment.task_id)
+                  return (
+                    <div key={assignment.task_id} className="border rounded-lg p-4 bg-card/50">
+                      <div className="flex flex-col md:flex-row md:items-start gap-4">
+                        <div className="w-full md:w-32">
+                          {assignment.image_url ? (
+                            <img
+                              src={`${backendBaseUrl}${assignment.image_url}`}
+                              alt="Report"
+                              className="w-full h-24 object-cover rounded-md border"
+                            />
+                          ) : (
+                            <div className="w-full h-24 rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                              No image
+                            </div>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {assignment.location || "Location not available"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {assignment.latitude?.toFixed(4)}, {assignment.longitude?.toFixed(4)}
-                        </p>
-                        {assignment.due_date && (
-                          <p className="text-xs text-muted-foreground">
-                            <strong>Pickup:</strong> {new Date(assignment.due_date).toLocaleString()}
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold">Report #{assignment.report_id}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {assignment.waste_type || "Pending AI"}
+                              </p>
+                            </div>
+                            <Badge variant="secondary">
+                              {assignment.completion_status || (assignment.completed_at ? "COMPLETED" : "TASK DUE")}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {assignment.location || "Location not available"}
                           </p>
-                        )}
-                      </div>
-                      <div className="flex items-center">
-                        <Button size="sm" onClick={() => setCompletionTask(assignment)}>
-                          <Camera className="h-4 w-4 mr-1" />
-                          Complete Pickup
-                        </Button>
+                          <p className="text-xs text-muted-foreground">
+                            {assignment.latitude?.toFixed(4)}, {assignment.longitude?.toFixed(4)}
+                          </p>
+                          {assignment.due_date && (
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Pickup:</strong> {new Date(assignment.due_date).toLocaleString()}
+                            </p>
+                          )}
+                          {taskRoute && (
+                            <p className="text-xs text-muted-foreground">
+                              Route: {formatRouteDistance(taskRoute.distance_meters)} ·{" "}
+                              {formatRouteDuration(taskRoute.duration_seconds)} ·{" "}
+                              <Badge variant="outline" className="ml-1 text-[10px]">
+                                {taskRoute.status}
+                              </Badge>
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePlanSingleRoute(assignment)}
+                            disabled={routeLoadingTaskId === assignment.task_id}
+                          >
+                            <Navigation className="h-4 w-4 mr-1" />
+                            {routeLoadingTaskId === assignment.task_id ? "Planning..." : "Plan route"}
+                          </Button>
+                          {taskRoute && (
+                            <Button size="sm" variant="secondary" onClick={() => openRouteView(taskRoute)}>
+                              <Route className="h-4 w-4 mr-1" />
+                              View route
+                            </Button>
+                          )}
+                          <Button size="sm" onClick={() => setCompletionTask(assignment)}>
+                            <Camera className="h-4 w-4 mr-1" />
+                            Complete Pickup
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
@@ -727,6 +944,87 @@ export default function DriverPortalPage() {
               {completionLoading ? "Submitting..." : "Submit Completion"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={routeDialogOpen} onOpenChange={setRouteDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedRoute?.route_type === "multi" ? "Optimized multi-stop route" : "Pickup route"}
+            </DialogTitle>
+            <DialogDescription>
+              OpenStreetMap route from your current location. Start/complete trip to log distance and time.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRoute && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="secondary">{selectedRoute.route_type}</Badge>
+                <Badge variant="outline">{selectedRoute.status}</Badge>
+                <span className="text-muted-foreground">
+                  {formatRouteDistance(selectedRoute.distance_meters)} ·{" "}
+                  {formatRouteDuration(selectedRoute.duration_seconds)}
+                </span>
+              </div>
+
+              {selectedRoute.route_type === "multi" && selectedRoute.ordered_stops?.length > 0 && (
+                <div className="rounded-md border p-3 space-y-1">
+                  <p className="text-sm font-medium">Stop order</p>
+                  {selectedRoute.ordered_stops.map((stop) => (
+                    <p key={stop.task_id} className="text-xs text-muted-foreground">
+                      {stop.order}. Report #{stop.report_id}
+                      {stop.location ? ` — ${stop.location}` : ""}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <RouteMap
+                coordinates={
+                  (selectedRoute.geometry?.coordinates as [number, number][] | undefined) || null
+                }
+                stops={routeMapStops}
+                distanceMeters={selectedRoute.distance_meters}
+                durationSeconds={selectedRoute.duration_seconds}
+              />
+
+              <div className="flex flex-wrap gap-2">
+                {(selectedRoute.status === "planned") && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleStartTrip(selectedRoute)}
+                    disabled={tripActionLoading}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Start trip
+                  </Button>
+                )}
+                {(selectedRoute.status === "planned" || selectedRoute.status === "started") && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleCompleteTrip(selectedRoute)}
+                    disabled={tripActionLoading}
+                  >
+                    <Flag className="h-4 w-4 mr-1" />
+                    Complete trip
+                  </Button>
+                )}
+                {selectedRoute.started_at && (
+                  <p className="text-xs text-muted-foreground self-center">
+                    Started {new Date(selectedRoute.started_at).toLocaleString()}
+                  </p>
+                )}
+                {selectedRoute.completed_at && (
+                  <p className="text-xs text-muted-foreground self-center">
+                    Completed {new Date(selectedRoute.completed_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

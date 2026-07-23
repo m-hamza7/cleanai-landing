@@ -23,6 +23,7 @@ Backend requires `DATABASE_URL` (Supabase URI). SSL is used for remote pools. `b
 | `reports` | Waste submissions + status workflow |
 | `ai_classification` | YOLO results per report |
 | `cleanup_tasks` | Driver assignments + completion + pickup confirm |
+| `driver_routes` | Planned OSM routes + trip log (ELD) |
 | `alerts` | Notification records |
 | `geospatial_zones` | Future zones |
 | `satellite_verification` | Future satellite checks |
@@ -36,6 +37,7 @@ erDiagram
   reports ||--o| ai_classification : classified_as
   reports ||--o{ cleanup_tasks : assigned
   users ||--o{ cleanup_tasks : drives
+  users ||--o{ driver_routes : plans
   users ||--o{ alerts : receives
   reports ||--o{ alerts : about
   users ||--o{ system_logs : logs

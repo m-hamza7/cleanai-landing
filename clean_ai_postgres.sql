@@ -101,6 +101,29 @@ CREATE TABLE IF NOT EXISTS system_logs (
   created_at  TIMESTAMP   NOT NULL DEFAULT NOW()
 );
 
+-- Driver planned routes + basic trip log (ELD)
+CREATE TABLE IF NOT EXISTS driver_routes (
+  route_id           SERIAL PRIMARY KEY,
+  driver_user_id     INTEGER      NOT NULL REFERENCES users(user_id),
+  route_type         VARCHAR(20)  NOT NULL,
+  task_ids           JSONB        NOT NULL DEFAULT '[]',
+  origin_lat         FLOAT        NOT NULL,
+  origin_lng         FLOAT        NOT NULL,
+  destination_lat    FLOAT        NOT NULL,
+  destination_lng    FLOAT        NOT NULL,
+  ordered_stops      JSONB        NOT NULL DEFAULT '[]',
+  geometry           JSONB,
+  distance_meters    FLOAT        NOT NULL DEFAULT 0,
+  duration_seconds   FLOAT        NOT NULL DEFAULT 0,
+  status             VARCHAR(20)  NOT NULL DEFAULT 'planned',
+  started_at         TIMESTAMP,
+  completed_at       TIMESTAMP,
+  created_at         TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_driver_routes_driver ON driver_routes(driver_user_id);
+CREATE INDEX IF NOT EXISTS idx_driver_routes_status ON driver_routes(status);
+
 -- ============================================================
 -- Seed data – demo accounts
 -- Passwords (bcrypt hash corresponds to):

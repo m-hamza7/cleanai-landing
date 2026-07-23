@@ -97,6 +97,7 @@ flowchart TB
 - [[Citizen Portal]]
 - [[Admin Dashboard]]
 - [[Driver Portal]]
+- [[Driver Route Planning]]
 - [[Landing Page]]
 
 ### API

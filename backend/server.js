@@ -63,6 +63,11 @@ async function startServer() {
       console.log('✅ Report workflow schema migration checked on startup');
     }
 
+    if (typeof driverRoutes.ensureDriverRoutesSchema === 'function') {
+      await driverRoutes.ensureDriverRoutesSchema();
+      console.log('✅ Driver routes schema migration checked on startup');
+    }
+
     app.listen(PORT, () => {
       console.log(`\n🚀 CleanAI Backend Server running on port ${PORT}`);
       console.log(`📊 API Endpoints:`);
@@ -71,7 +76,9 @@ async function startServer() {
       console.log(`   Reports:  /api/reports/*`);
       console.log(`   Users:    /api/users/*`);
       console.log(`   Alerts:   /api/alerts/*`);
-      console.log(`   Drivers:  /api/drivers/*\n`);
+      console.log(`   Drivers:  /api/drivers/*`);
+      console.log(`   Routes:   /api/drivers/routes/*`);
+      console.log(`   OSRM:     ${process.env.OSRM_BASE_URL || 'https://router.project-osrm.org'}\n`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);

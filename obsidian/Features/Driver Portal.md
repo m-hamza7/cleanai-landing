@@ -16,6 +16,8 @@ tags:
 3. View area-scoped assignments
 4. Complete job with photo + current GPS
 5. Proximity enforcement: must be within **0.2 km** of report coordinates
+6. Plan per-task OSM route and optimize all pickups ([[Driver Route Planning]])
+7. Start / complete trip log (distance + duration)
 
 ## Supported areas (registration)
 

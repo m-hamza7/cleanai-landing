@@ -341,6 +341,37 @@ export interface DriverAssignment {
   severity_level?: string;
 }
 
+export interface DriverRouteStop {
+  task_id: number;
+  report_id: number;
+  lat: number;
+  lng: number;
+  location?: string | null;
+  order: number;
+}
+
+export interface DriverRoute {
+  route_id: number;
+  driver_user_id: number;
+  route_type: 'single' | 'multi' | string;
+  task_ids: number[];
+  origin_lat: number;
+  origin_lng: number;
+  destination_lat: number;
+  destination_lng: number;
+  ordered_stops: DriverRouteStop[];
+  geometry: { type?: string; coordinates: [number, number][] } | null;
+  distance_meters: number;
+  duration_seconds: number;
+  status: 'planned' | 'started' | 'completed' | 'cancelled' | string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string;
+  driver_name?: string;
+  driver_phone?: string;
+  driver_area?: string;
+}
+
 export const driversAPI = {
   register: async (payload: {
     name: string;
@@ -414,6 +445,54 @@ export const driversAPI = {
     }
 
     return data;
+  },
+
+  planSingleRoute: async (payload: {
+    task_id: number;
+    origin_lat: number;
+    origin_lng: number;
+  }): Promise<DriverRoute> => {
+    const data = await fetchAPI<{ route: DriverRoute }>('/drivers/routes/single', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data.route;
+  },
+
+  planMultiRoute: async (payload: {
+    origin_lat: number;
+    origin_lng: number;
+    task_ids?: number[];
+  }): Promise<DriverRoute> => {
+    const data = await fetchAPI<{ route: DriverRoute }>('/drivers/routes/multi', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data.route;
+  },
+
+  startRoute: async (routeId: number): Promise<DriverRoute> => {
+    const data = await fetchAPI<{ route: DriverRoute }>(`/drivers/routes/${routeId}/start`, {
+      method: 'POST',
+    });
+    return data.route;
+  },
+
+  completeRoute: async (routeId: number): Promise<DriverRoute> => {
+    const data = await fetchAPI<{ route: DriverRoute }>(`/drivers/routes/${routeId}/complete`, {
+      method: 'POST',
+    });
+    return data.route;
+  },
+
+  getMyRoutes: async (): Promise<DriverRoute[]> => {
+    const data = await fetchAPI<{ routes: DriverRoute[] }>('/drivers/routes/mine');
+    return data.routes || [];
+  },
+
+  getAllRoutes: async (): Promise<DriverRoute[]> => {
+    const data = await fetchAPI<{ routes: DriverRoute[] }>('/drivers/routes');
+    return data.routes || [];
   },
 };
 
